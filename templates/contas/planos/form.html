@@ -1,0 +1,103 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}{% if acao == 'editar' %}Editar Plano{% else %}Novo Plano{% endif %} - Finance Flow{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-3xl">
+  <section class="glass-panel rounded-[28px] p-8 shadow-2xl shadow-black/10">
+    <div class="mb-8">
+      <p class="text-xs font-semibold uppercase tracking-[0.28em] text-slate-500">Cadastros</p>
+      <h1 class="mt-3 text-3xl font-bold tracking-tight text-white">{% if acao == 'editar' %}Editar Plano de Conta{% else %}Novo Plano de Conta{% endif %}</h1>
+    </div>
+
+    {% if erro_formulario %}
+      <div class="mb-5 rounded-2xl border border-rose-400/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">{{ erro_formulario }}</div>
+    {% endif %}
+
+    <form method="POST" class="space-y-5">
+      {% csrf_token %}
+      <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
+        <div>
+          <label for="codigo" class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Código</label>
+          <input id="codigo" name="codigo" type="text" value="{{ plano.codigo|default:codigo_sugerido|default:'' }}" required class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white outline-none transition focus:border-neonprimary/40" placeholder="Ex.: 1 ou 1.1" />
+          <p class="mt-1 text-xs text-slate-500">Sugestão automática ao escolher a conta pai.</p>
+        </div>
+        <div>
+          <label for="nome" class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Nome</label>
+          <input id="nome" name="nome" type="text" value="{{ plano.nome|default:'' }}" required class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white outline-none transition focus:border-neonprimary/40" />
+        </div>
+      </div>
+      <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
+        <div>
+          <label for="tipo_natureza" class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Tipo</label>
+          <select id="tipo_natureza" name="tipo_natureza" required class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white outline-none transition focus:border-neonprimary/40">
+            {% for value, label in tipo_choices %}
+              <option value="{{ value }}" {% if plano and plano.tipo_natureza == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label for="conta_pai_id" class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Conta Pai (Opcional)</label>
+          <select id="conta_pai_id" name="conta_pai_id" class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white outline-none transition focus:border-neonprimary/40">
+            <option value="">Nenhuma</option>
+            {% for item in planos_pai %}
+              <option value="{{ item.id }}" {% if plano and plano.conta_pai_id == item.id %}selected{% endif %}>{{ item.codigo }} - {{ item.nome }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <div class="flex items-center justify-end gap-3 pt-4">
+        <a href="{% url 'contas:lista_planos_conta' %}" class="inline-flex items-center rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-slate-300 transition hover:border-white/20 hover:bg-white/10">Cancelar</a>
+        <button type="submit" class="inline-flex items-center rounded-2xl bg-neonprimary px-5 py-2 text-sm font-semibold text-slate-950 transition hover:brightness-110">Salvar</button>
+      </div>
+    </form>
+  </section>
+</div>
+
+<script>
+  (function () {
+    const selectPai = document.getElementById('conta_pai_id');
+    const inputCodigo = document.getElementById('codigo');
+    const isEditar = '{{ acao }}' === 'editar';
+    let codigoTocado = false;
+
+    if (!selectPai || !inputCodigo) {
+      return;
+    }
+
+    inputCodigo.addEventListener('input', function () {
+      codigoTocado = true;
+    });
+
+    async function sugerirCodigo(forcar) {
+      if (!forcar && codigoTocado) {
+        return;
+      }
+
+      const contaPaiId = selectPai.value;
+      const params = new URLSearchParams();
+      if (contaPaiId) {
+        params.set('conta_pai_id', contaPaiId);
+      }
+
+      const resp = await fetch('{% url "contas:sugerir_codigo_plano" %}?' + params.toString());
+      if (!resp.ok) {
+        return;
+      }
+
+      const data = await resp.json();
+      if (data.codigo) {
+        inputCodigo.value = data.codigo;
+      }
+    }
+
+    selectPai.addEventListener('change', function () {
+      sugerirCodigo(true);
+    });
+
+    if (!isEditar && !inputCodigo.value) {
+      sugerirCodigo(true);
+    }
+  })();
+</script>
+{% endblock %}

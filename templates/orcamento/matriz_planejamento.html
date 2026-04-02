@@ -1,0 +1,96 @@
+{% extends "layouts/base.html" %}
+{% load l10n %}
+
+{% block title %}Matriz de Planejamento Sazonal - Finance Flow{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-[96rem] space-y-6">
+  <section class="glass-panel rounded-[28px] p-6">
+    <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+      <div>
+        <p class="text-xs font-semibold uppercase tracking-[0.28em] text-slate-500">Planejamento Sazonal</p>
+        <h1 class="mt-2 text-3xl font-bold tracking-tight text-white">Matriz Anual de Receitas e Despesas</h1>
+        <p class="mt-2 text-sm text-slate-400">Defina tetos mensais para {{ ano_selecionado }} usando como referencia o realizado de {{ ano_anterior }}.</p>
+      </div>
+
+      <div class="inline-flex items-center gap-3 rounded-2xl border border-white/10 bg-black/20 px-3 py-2">
+        <a href="{% url 'orcamento:matriz_planejamento_ano' ano_anterior_link %}{% if filtro_tipo != 'Todos' %}?tipo={{ filtro_tipo }}{% endif %}" class="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-slate-300 transition hover:bg-white/10">&lt;</a>
+        <span class="min-w-20 text-center text-lg font-semibold text-white">{{ ano_selecionado }}</span>
+        <a href="{% url 'orcamento:matriz_planejamento_ano' ano_proximo_link %}{% if filtro_tipo != 'Todos' %}?tipo={{ filtro_tipo }}{% endif %}" class="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-slate-300 transition hover:bg-white/10">&gt;</a>
+      </div>
+    </div>
+
+    <form method="GET" class="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
+      <input type="hidden" name="ano" value="{{ ano_selecionado }}" />
+      <label for="filtro_tipo" class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Tipo</label>
+      <select id="filtro_tipo" name="tipo" class="rounded-xl border border-white/10 bg-darkbg px-3 py-2 text-sm text-white outline-none transition focus:border-neonprimary/40">
+        <option value="Todos" {% if filtro_tipo == 'Todos' %}selected{% endif %}>Todos</option>
+        {% for tipo in tipos_disponiveis %}
+          <option value="{{ tipo }}" {% if filtro_tipo == tipo %}selected{% endif %}>{{ tipo }}</option>
+        {% endfor %}
+      </select>
+      <button type="submit" class="inline-flex items-center rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-slate-200 transition hover:bg-white/10">Filtrar</button>
+    </form>
+  </section>
+
+  <form method="POST" class="glass-panel rounded-[28px] p-4 md:p-6">
+    {% csrf_token %}
+    <input type="hidden" name="tipo" value="{{ filtro_tipo }}" />
+
+    <div class="mb-4 flex items-center justify-between">
+      <p class="text-xs uppercase tracking-[0.18em] text-slate-500">Grade Horizontal de 12 Meses</p>
+      <button type="submit" class="inline-flex items-center rounded-2xl bg-neonprimary px-5 py-2.5 text-sm font-semibold text-slate-950 transition hover:brightness-110">Salvar Planejamento</button>
+    </div>
+
+    <div class="overflow-x-auto rounded-2xl border border-white/10">
+      <table class="min-w-[1300px] divide-y divide-white/10">
+        <thead class="bg-white/5">
+          <tr>
+            <th class="sticky left-0 z-20 min-w-[280px] border-r border-white/10 bg-[#121216] px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Plano de Conta</th>
+            {% for mes_numero, mes_label in meses_ano %}
+              <th class="min-w-[140px] px-3 py-3 text-center text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">{{ mes_label }}</th>
+            {% endfor %}
+            <th class="min-w-[170px] border-l border-white/10 px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Total Anual</th>
+          </tr>
+        </thead>
+
+        <tbody class="divide-y divide-white/5 bg-black/10">
+          {% for linha in matriz %}
+            <tr class="transition hover:bg-white/5">
+              <td class="sticky left-0 z-10 border-r border-white/10 bg-[#101114] px-4 py-3 align-top">
+                <p class="text-sm font-semibold text-white">{{ linha.plano_conta.nome }}</p>
+                <p class="mt-1 text-[10px] uppercase tracking-[0.14em] text-slate-500">{{ linha.plano_conta.tipo_natureza }} • {{ linha.plano_conta.codigo }}</p>
+              </td>
+
+              {% for celula in linha.meses %}
+                <td class="px-2 py-2 align-top">
+                  <div class="rounded-xl border border-white/10 bg-darkbg px-2 py-2">
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      name="valor_{{ linha.plano_conta.id }}_{{ celula.mes }}"
+                      {% if celula.tem_valor_planejado %}value="{{ celula.valor_planejado|unlocalize }}"{% endif %}
+                      class="w-full bg-darkbg text-center text-sm font-medium text-white outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                      placeholder="0,00"
+                    />
+                    <p class="mt-1 text-center text-[10px] text-slate-500">{{ ano_anterior }}: R$ {{ celula.valor_real_ano_passado_fmt }}</p>
+                  </div>
+                </td>
+              {% endfor %}
+
+              <td class="border-l border-white/10 px-4 py-3 text-right align-top">
+                <p class="text-sm font-semibold text-neonprimary">R$ {{ linha.total_anual|floatformat:2 }}</p>
+              </td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="14" class="px-4 py-8 text-center text-sm text-slate-400">Nenhum plano de conta encontrado para o filtro selecionado.</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </form>
+</div>
+{% endblock %}

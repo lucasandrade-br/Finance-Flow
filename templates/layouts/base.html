@@ -1,0 +1,82 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-br" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}Finance Flow — OBZ{% endblock %}</title>
+
+  <!-- PWA -->
+  <meta name="theme-color" content="#0F172A" />
+  <link rel="manifest" href="{% static 'pwa/manifest.json' %}" />
+
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            darkbg:      '#000000',
+            darkcard:    '#080808',
+            neonprimary: '#10B981',
+            neonaccent:  '#8B5CF6',
+            neondanger:  '#F43F5E',
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          },
+        },
+      },
+    }
+  </script>
+
+  <!-- Estilos globais: PWA base + Glassmorphism -->
+  <style>
+    body {
+      background-color: #0f0f0f;
+      color: #F8FAFC;
+      -webkit-font-smoothing: antialiased;
+    }
+    .glass-panel {
+      background: rgba(18, 18, 19, 0.7);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(15, 14, 14, 0.05);
+    }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+  </style>
+
+  {% block extra_head %}{% endblock %}
+</head>
+
+<body class="flex h-screen overflow-hidden font-sans bg-darkbg text-slate-100">
+
+  {% if not hide_sidebar %}
+    {% include 'components/sidebar.html' %}
+  {% endif %}
+
+  <!-- Conteúdo principal -->
+  <main class="flex-1 overflow-y-auto p-8">
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- Registro do Service Worker -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register("{% static 'pwa/sw.js' %}")
+        .then(() => console.log('[PWA] Service Worker registrado.'))
+        .catch((err) => console.warn('[PWA] Falha ao registrar SW:', err));
+    }
+  </script>
+
+  {% block extra_scripts %}{% endblock %}
+</body>
+</html>

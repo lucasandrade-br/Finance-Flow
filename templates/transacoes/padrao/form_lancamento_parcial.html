@@ -1,0 +1,260 @@
+<!-- Parcial: apenas o formulário, sem extends/base nem blocos -->
+<div class="mx-auto max-w-2xl">
+  <section class="glass-panel rounded-[28px] p-8 shadow-2xl shadow-black/10">
+    <div class="mb-8">
+      <p class="text-xs font-semibold uppercase tracking-[0.28em] text-slate-500">Novo Lançamento</p>
+      <h1 class="mt-3 text-3xl font-bold tracking-tight text-white">{{ titulo_form_transacao|default:'Cadastrar Transação' }}</h1>
+      <p class="mt-2 text-sm text-slate-400">{{ subtitulo_form_transacao|default:'Preencha os campos para adicionar uma nova movimentação no livro-razão.' }}</p>
+    </div>
+
+    <form method="POST" action="{{ form_action|default:'' }}" enctype="multipart/form-data" class="space-y-5">
+      {% csrf_token %}
+      {% if ciclo_id_form %}
+        <input type="hidden" name="ciclo_id" value="{{ ciclo_id_form }}" />
+      {% endif %}
+      {% if next_url_form %}
+        <input type="hidden" name="next" value="{{ next_url_form }}" />
+      {% endif %}
+      <!-- ...restante do formulário igual ao original... -->
+      {% include 'transacoes/padrao/form_lancamento_campos.html' %}
+    </form>
+  </section>
+</div>
+
+<!-- Incluir Modal Reutilizável -->
+{% include "components/modal_nova_tag.html" %}
+
+<!-- Select2 JS e CSS -->
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+<style>
+  /* ...estilos Select2 e customizações do original... */
+  .select2-container--default .select2-selection--multiple {
+    background-color: #000000;
+    border: 1px solid rgba(255,255,255,0.10);
+    border-radius: 1rem;
+    min-height: 48px;
+    padding: 0.25rem 0.5rem;
+    color: #fff;
+    font-size: 0.95rem;
+    box-shadow: none;
+    transition: border 0.2s;
+  }
+  .select2-container--default.select2-container--focus .select2-selection--multiple {
+    border-color: #10b981;
+  }
+  .select2-container--default .select2-selection--multiple .select2-selection__choice {
+    background-color: #10b981;
+    color: #0f172a;
+    border: none;
+    border-radius: 0.75rem;
+    font-weight: 600;
+    margin-top: 0.25rem;
+    margin-bottom: 0.25rem;
+    margin-right: 0.5rem;
+    padding: 0.25rem 0.75rem;
+    box-shadow: 0 1px 2px 0 #0002;
+  }
+  .select2-container--default .select2-selection--multiple .select2-selection__choice__remove {
+    color: #0e0e0f;
+    margin-right: 0.5em;
+    border: none;
+  }
+  .select2-container--default .select2-search--inline .select2-search__field {
+    background: transparent;
+    color: #fff;
+    font-size: 0.95rem;
+    margin-top: 0.25rem;
+  }
+  .select2-dropdown {
+    background-color: #090a0e;
+    border-radius: 1rem;
+    border: 1px solid rgba(255,255,255,0.10);
+    color: #fff;
+    box-shadow: 0 4px 24px 0 #0005;
+  }
+  .select2-results__option {
+    color: #fff;
+    padding: 0.75rem 1rem;
+    border-radius: 0.5rem;
+    font-size: 0.95rem;
+  }
+  .select2-container--default .select2-results__option--highlighted.select2-results__option--selectable,
+  .select2-container--default .select2-results__option--highlighted[aria-selected] {
+    background-color: #10b981;
+    color: #0d0e11;
+  }
+  .select2-container--default .select2-selection--multiple .select2-selection__rendered {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    align-items: center;
+    padding: 0.25rem 0;
+  }
+  .select2-container--default .select2-selection--multiple .select2-selection__placeholder {
+    color: #94a3b8;
+    opacity: 0.8;
+    font-size: 0.95rem;
+  }
+  .select2-container--default .select2-selection--single {
+    background-color: #000000;
+    border: 1px solid rgba(255,255,255,0.10);
+    border-radius: 1rem;
+    height: auto;
+    min-height: 48px;
+    padding: 0.35rem 1rem;
+    display: flex;
+    align-items: center;
+    transition: border 0.2s;
+  }
+  .select2-container--default.select2-container--focus .select2-selection--single {
+    border-color: #10b981;
+  }
+  .select2-container--default .select2-selection--single .select2-selection__rendered {
+    color: #fff;
+    padding-left: 0;
+    padding-right: 20px;
+    font-size: 0.875rem;
+    line-height: normal;
+  }
+  .select2-container--default .select2-selection--single .select2-selection__arrow {
+    height: 100%;
+    right: 1rem;
+  }
+</style>
+
+<script>
+  $(document).ready(function () {
+    const $tipo = $('#tipo');
+    const $planoConta = $('#plano_conta_id');
+    const opcoesPlanoOriginais = Array.from(document.querySelectorAll('#plano_conta_id option')).map(function (option) {
+      return {
+        value: option.value,
+        text: option.textContent,
+        tipo: option.dataset.tipo || '',
+      };
+    });
+
+    $('#tipo, #status, #formato_pagamento, #frequencia').select2({
+      theme: 'default',
+      width: '100%',
+      minimumResultsForSearch: Infinity
+    });
+    $('#conta_bancaria_id, #conta_destino_id, #plano_conta_id').select2({
+      theme: 'default',
+      width: '100%',
+      placeholder: 'Selecione uma opção...'
+    });
+
+    function alternarContaDestino() {
+      const tipoAtual = $tipo.val();
+      const wrapper = document.getElementById('contaDestinoWrapper');
+      const inputContaDestino = document.getElementById('conta_destino_id');
+      if (!wrapper || !inputContaDestino) {
+        return;
+      }
+
+      if (tipoAtual === 'Transferencia') {
+        wrapper.classList.remove('hidden');
+        inputContaDestino.required = true;
+      } else {
+        wrapper.classList.add('hidden');
+        inputContaDestino.required = false;
+        $('#conta_destino_id').val(null).trigger('change');
+      }
+    }
+
+    function filtrarPlanoContaPorTipo() {
+      const tipoAtual = $tipo.val();
+      const valorAtual = $planoConta.val();
+      const opcoesFiltradas = opcoesPlanoOriginais.filter(function (opcao) {
+        return opcao.value && opcao.tipo === tipoAtual;
+      });
+
+      $planoConta.empty();
+
+      if (!opcoesFiltradas.length) {
+        $planoConta.append(new Option('Nenhum plano compatível com o tipo selecionado', '', false, false));
+        $planoConta.val('').trigger('change.select2');
+        return;
+      }
+
+      opcoesFiltradas.forEach(function (opcao) {
+        const deveSelecionar = String(opcao.value) === String(valorAtual);
+        $planoConta.append(new Option(opcao.text, opcao.value, deveSelecionar, deveSelecionar));
+      });
+
+      if (!$planoConta.val()) {
+        $planoConta.val(opcoesFiltradas[0].value);
+      }
+      $planoConta.trigger('change.select2');
+    }
+
+    function sincronizarPlanoContaComTag(dataTag) {
+      if (!dataTag || !dataTag.plano_conta_id) {
+        return;
+      }
+      const planoContaId = String(dataTag.plano_conta_id);
+      const $plano = $('#plano_conta_id');
+      const opcaoExiste = $plano.find('option[value="' + planoContaId + '"]').length > 0;
+      if (opcaoExiste) {
+        $plano.val(planoContaId).trigger('change');
+      }
+    }
+
+    $('#tagsSelect2').select2({
+      theme: 'default',
+      width: '100%',
+      placeholder: 'Selecione ou busque tags...',
+      minimumInputLength: 0,
+      ajax: {
+        url: '{% url "contas:listar_tags_json" %}',
+        dataType: 'json',
+        delay: 250,
+        data: function (params) {
+          return {
+            q: params.term,
+            tipo: $tipo.val(),
+          };
+        },
+        processResults: function (data) { return { results: data.results }; },
+      },
+    });
+    $('#tagsSelect2').on('select2:select', function (event) {
+      sincronizarPlanoContaComTag(event.params.data);
+    });
+
+    $tipo.on('change', function () {
+      alternarContaDestino();
+      filtrarPlanoContaPorTipo();
+      $('#tagsSelect2').val(null).trigger('change');
+    });
+    alternarContaDestino();
+    filtrarPlanoContaPorTipo();
+
+    const inputVisual = document.getElementById('valor_visual');
+    const inputReal = document.getElementById('valor_real');
+    inputVisual.addEventListener('input', function(e) {
+      let valorLimpo = e.target.value.replace(/\D/g, '');
+      if (valorLimpo === '') { inputReal.value = ''; e.target.value = ''; return; }
+      let valorNumerico = (parseInt(valorLimpo, 10) / 100);
+      inputReal.value = valorNumerico.toFixed(2);
+      e.target.value = valorNumerico.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    });
+    document.getElementById('btnNovaTag').addEventListener('click', function (e) {
+      e.preventDefault();
+      abrirModalNovaTag();
+    });
+    window.addEventListener('tagCriada', function (e) {
+      const { id, text, plano_conta_id } = e.detail;
+      const newOption = new Option(text, id, true, true);
+      if (plano_conta_id) {
+        newOption.dataset.planoContaId = plano_conta_id;
+      }
+      $('#tagsSelect2').append(newOption).trigger('change');
+      sincronizarPlanoContaComTag({ plano_conta_id: plano_conta_id });
+    });
+  });
+</script>

@@ -1,0 +1,395 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Livro-Razão — Finance Flow{% endblock %}
+
+{% block extra_head %}
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" />
+  <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+  <style>
+    .flatpickr-calendar {
+      background: #0b0c10;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45);
+      color: #e2e8f0;
+      border-radius: 1rem;
+    }
+    .flatpickr-months .flatpickr-month,
+    .flatpickr-current-month .flatpickr-monthDropdown-months,
+    .flatpickr-current-month input.cur-year {
+      color: #e2e8f0;
+      fill: #e2e8f0;
+    }
+    .flatpickr-weekdays,
+    .flatpickr-weekday {
+      background: transparent;
+      color: #94a3b8;
+    }
+    .flatpickr-day {
+      color: #e2e8f0;
+      border-radius: 0.6rem;
+    }
+    .flatpickr-day.inRange,
+    .flatpickr-day.prevMonthDay.inRange,
+    .flatpickr-day.nextMonthDay.inRange {
+      background: rgba(16, 185, 129, 0.2);
+      border-color: transparent;
+      box-shadow: none;
+    }
+    .flatpickr-day.selected,
+    .flatpickr-day.startRange,
+    .flatpickr-day.endRange {
+      background: #10b981;
+      border-color: #10b981;
+      color: #071013;
+    }
+
+    .select2-container--default .select2-selection--single {
+      background-color: #000000;
+      border: 1px solid rgba(255,255,255,0.10);
+      border-radius: 1rem;
+      height: auto;
+      min-height: 48px;
+      padding: 0.35rem 1rem;
+      display: flex;
+      align-items: center;
+      transition: border 0.2s;
+    }
+    .select2-container--default.select2-container--focus .select2-selection--single {
+      border-color: #10b981;
+    }
+    .select2-container--default .select2-selection--single .select2-selection__rendered {
+      color: #fff;
+      padding-left: 0;
+      padding-right: 20px;
+      font-size: 0.875rem;
+      line-height: normal;
+    }
+    .select2-container--default .select2-selection--single .select2-selection__arrow {
+      height: 100%;
+      right: 1rem;
+    }
+    .select2-dropdown {
+      background-color: #090a0e;
+      border-radius: 1rem;
+      border: 1px solid rgba(255,255,255,0.10);
+      color: #fff;
+      box-shadow: 0 4px 24px 0 #0005;
+    }
+    .select2-results__option {
+      color: #fff;
+      padding: 0.75rem 1rem;
+      border-radius: 0.5rem;
+      font-size: 0.95rem;
+    }
+    .select2-container--default .select2-results__option--highlighted.select2-results__option--selectable,
+    .select2-container--default .select2-results__option--highlighted[aria-selected] {
+      background-color: #10b981;
+      color: #0d0e11;
+    }
+  </style>
+{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-7xl">
+  <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+    <div>
+      <p class="text-sm font-medium uppercase tracking-[0.3em] text-gray-500">Operacional</p>
+      <h1 class="mt-2 text-4xl font-bold tracking-tight text-white">Livro-Razão</h1>
+      <p class="mt-2 max-w-2xl text-sm text-slate-400">Extrato completo das movimentações financeiras.</p>
+    </div>
+    <div class="inline-flex items-center gap-2">
+      <button id="abrirModalLixeira" type="button" class="inline-flex items-center rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-slate-300 transition hover:bg-white/10">Lixeira</button>
+      <a href="{% url 'transacoes:nova_transacao' %}" class="inline-flex items-center justify-center gap-2 rounded-2xl bg-neonprimary px-5 py-3 text-sm font-semibold text-slate-950 shadow-lg shadow-neonprimary/20 transition hover:brightness-110">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+        </svg>
+        Novo Lançamento
+      </a>
+    </div>
+  </div>
+
+  <section class="glass-panel mt-6 rounded-[28px] p-6 shadow-2xl shadow-black/10">
+    <form method="GET" class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div>
+        <label for="data_range" class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Data</label>
+        <input id="data_range" name="data_range" type="text" value="{{ filtros.data_range }}" placeholder="Selecione intervalo" class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white outline-none transition focus:border-neonprimary/40" />
+      </div>
+      <div>
+        <label for="tipo" class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Tipo</label>
+        <select id="tipo" name="tipo" class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white outline-none transition focus:border-neonprimary/40">
+          <option value="">Todos</option>
+          {% for value, label in tipos_transacao %}
+            <option value="{{ value }}" {% if filtros.tipo == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label for="plano_conta_id" class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Plano de Contas</label>
+        <select id="plano_conta_id" name="plano_conta_id" class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white outline-none transition focus:border-neonprimary/40">
+          <option value="">Todos</option>
+          {% for plano in plano_contas %}
+            <option value="{{ plano.id }}" {% if filtros.plano_conta_id == plano.id|stringformat:'s' %}selected{% endif %}>{{ plano.codigo }} - {{ plano.nome }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label for="status" class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Status</label>
+        <select id="status" name="status" class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white outline-none transition focus:border-neonprimary/40">
+          <option value="">Todos</option>
+          {% for value, label in status_choices %}
+            <option value="{{ value }}" {% if filtros.status == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label for="tag_id" class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Tags</label>
+        <select id="tag_id" name="tag_id" class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white outline-none transition focus:border-neonprimary/40">
+          <option value="">Todas</option>
+          {% for tag in tags %}
+            <option value="{{ tag.id }}" {% if filtros.tag_id == tag.id|stringformat:'s' %}selected{% endif %}>{{ tag.nome }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="xl:col-span-5 flex items-center justify-end gap-3 pt-1">
+        <a href="{% url 'transacoes:livro_razao' %}" class="inline-flex items-center rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-slate-300 transition hover:bg-white/10">Limpar</a>
+        <button type="submit" class="inline-flex items-center rounded-2xl bg-neonprimary px-5 py-2 text-sm font-semibold text-slate-950 transition hover:brightness-110">Filtrar</button>
+      </div>
+    </form>
+  </section>
+
+  <section class="glass-panel mt-8 overflow-hidden rounded-[28px] p-6 shadow-2xl shadow-black/10">
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-white/10">
+        <thead>
+          <tr class="text-left text-xs uppercase tracking-[0.2em] text-slate-500">
+            <th class="py-3 pr-4">Data</th>
+            <th class="px-4 py-3">Tipo</th>
+            <th class="px-4 py-3">Categoria</th>
+            <th class="px-4 py-3">Descrição</th>
+            <th class="px-4 py-3">Tags</th>
+            <th class="px-4 py-3 text-right">Valor</th>
+            <th class="px-4 py-3 text-right">Ações</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-white/5 text-sm text-slate-200">
+          {% for t in transacoes %}
+            <tr class="transition hover:bg-white/[0.03]">
+              <td class="py-4 pr-4 text-slate-400">{{ t.data_pagamento|default:t.data_vencimento|date:"d/m/Y" }}</td>
+              <td class="px-4 py-4 text-slate-300">{{ t.get_tipo_display }}</td>
+              <td class="px-4 py-4 text-slate-300">{{ t.plano_conta.nome }}</td>
+              <td class="px-4 py-4 font-medium text-white">{{ t.descricao }}</td>
+              <td class="px-4 py-4 text-slate-300">
+                {% if t.tags.all %}
+                  {% for tag in t.tags.all %}
+                    <span class="inline-block rounded text-[#0f172a] bg-[#10b981] px-2 py-0.5 text-xs mr-1">{{ tag.nome }}</span>
+                  {% endfor %}
+                {% else %}
+                  <span class="text-slate-500">—</span>
+                {% endif %}
+              </td>
+
+              <td class="px-4 py-4 text-right font-semibold {% if t.tipo == 'Receita' %}text-neonprimary{% elif t.tipo == 'Despesa' %}text-neondanger{% else %}text-white{% endif %}">
+                {% if t.tipo == 'Receita' %}+{% elif t.tipo == 'Despesa' %}-{% endif %}R$ {{ t.valor|floatformat:2 }}
+              </td>
+              <td class="px-4 py-4 text-right">
+                <div class="inline-flex items-center gap-2">
+                  <a href="{% url 'transacoes:painel_edicao' 'movimentacao' t.id %}" class="inline-flex rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-slate-200 transition hover:bg-white/10">Editar</a>
+                  <button
+                    type="button"
+                    class="btnAbrirModalExcluir inline-flex rounded-xl border border-rose-300/20 bg-rose-500/10 px-3 py-1.5 text-xs font-medium text-rose-200 transition hover:bg-rose-500/20"
+                    data-url="{% url 'transacoes:excluir_movimentacao' t.id %}"
+                    data-descricao="{{ t.descricao|default:'Sem descrição'|escape }}"
+                  >
+                    Excluir
+                  </button>
+                </div>
+              </td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="7" class="py-10 text-center text-sm text-slate-500">Nenhuma movimentação registrada até o momento.</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <div id="modalLixeiraBackdrop" class="fixed inset-0 z-40 hidden bg-black/60 backdrop-blur-sm"></div>
+  <div id="modalLixeira" class="fixed inset-0 z-50 hidden overflow-y-auto p-4 md:p-8">
+    <div class="mx-auto max-w-6xl">
+      <div class="mb-3 flex justify-end">
+        <button id="fecharModalLixeira" type="button" class="inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm font-medium text-slate-300 transition hover:bg-white/10">Fechar</button>
+      </div>
+      <section class="glass-panel overflow-hidden rounded-[28px] p-6 shadow-2xl shadow-black/10">
+        <div class="mb-4 flex items-center justify-between">
+          <h2 class="text-lg font-bold tracking-tight text-white">Movimentações Excluídas</h2>
+          <p class="text-xs uppercase tracking-[0.2em] text-slate-500">Lixeira</p>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-white/10">
+            <thead>
+              <tr class="text-left text-xs uppercase tracking-[0.2em] text-slate-500">
+                <th class="py-3 pr-4">Data</th>
+                <th class="px-4 py-3">Tipo</th>
+                <th class="px-4 py-3">Categoria</th>
+                <th class="px-4 py-3">Descrição</th>
+                <th class="px-4 py-3">Excluída Em</th>
+                <th class="px-4 py-3 text-right">Valor</th>
+                <th class="px-4 py-3 text-right">Ações</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-white/5 text-sm text-slate-200">
+              {% for item in movimentacoes_excluidas %}
+                <tr class="transition hover:bg-white/[0.03]">
+                  <td class="py-4 pr-4 text-slate-400">{{ item.data_pagamento|default:item.data_vencimento|date:"d/m/Y" }}</td>
+                  <td class="px-4 py-4 text-slate-300">{{ item.get_tipo_display }}</td>
+                  <td class="px-4 py-4 text-slate-300">{{ item.plano_conta.nome|default:'-' }}</td>
+                  <td class="px-4 py-4 font-medium text-white">{{ item.descricao|default:'-' }}</td>
+                  <td class="px-4 py-4 text-slate-400">{{ item.excluida_em|date:"d/m/Y H:i" }}</td>
+                  <td class="px-4 py-4 text-right font-semibold {% if item.tipo == 'Receita' %}text-neonprimary{% elif item.tipo == 'Despesa' %}text-neondanger{% else %}text-white{% endif %}">
+                    {% if item.tipo == 'Receita' %}+{% elif item.tipo == 'Despesa' %}-{% endif %}R$ {{ item.valor|floatformat:2 }}
+                  </td>
+                  <td class="px-4 py-4 text-right">
+                    <form method="POST" action="{% url 'transacoes:restaurar_movimentacao_excluida' item.id %}">
+                      {% csrf_token %}
+                      <input type="hidden" name="next" value="{{ request.get_full_path }}" />
+                      <button type="submit" class="inline-flex rounded-xl border border-neonprimary/40 bg-neonprimary/15 px-3 py-1.5 text-xs font-medium text-neonprimary transition hover:brightness-110">Recuperar</button>
+                    </form>
+                  </td>
+                </tr>
+              {% empty %}
+                <tr>
+                  <td colspan="7" class="py-10 text-center text-sm text-slate-500">Nenhuma movimentação excluída.</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <div id="modalExcluirBackdrop" class="fixed inset-0 z-40 hidden bg-black/60 backdrop-blur-sm"></div>
+  <div id="modalExcluir" class="fixed inset-0 z-50 hidden items-center justify-center p-4">
+    <article class="glass-panel w-full max-w-lg rounded-[28px] border border-white/10 p-6 shadow-2xl shadow-black/40">
+      <p class="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Confirmação</p>
+      <h3 class="mt-2 text-xl font-bold text-white">Excluir movimentação</h3>
+      <p id="textoModalExcluir" class="mt-3 text-sm text-slate-300">Deseja realmente excluir esta movimentação?</p>
+      <div class="mt-6 flex items-center justify-end gap-3">
+        <button id="cancelarExcluir" type="button" class="inline-flex items-center rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-slate-300 transition hover:bg-white/10">Cancelar</button>
+        <form id="formConfirmarExcluir" method="POST" action="">
+          {% csrf_token %}
+          <input type="hidden" name="next" value="{{ request.get_full_path }}" />
+          <button type="submit" class="inline-flex items-center rounded-2xl bg-neondanger px-5 py-2.5 text-sm font-semibold text-white transition hover:brightness-110">Confirmar Exclusão</button>
+        </form>
+      </div>
+    </article>
+  </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/pt.js"></script>
+<script>
+  (function () {
+    $('#tipo, #plano_conta_id, #status, #tag_id').select2({
+      theme: 'default',
+      width: '100%',
+      placeholder: 'Selecione uma opção...',
+      allowClear: true,
+    });
+
+    const inputData = document.getElementById('data_range');
+    if (inputData && window.flatpickr) {
+      flatpickr(inputData, {
+        mode: 'range',
+        dateFormat: 'Y-m-d',
+        locale: 'pt',
+        rangeSeparator: ' até ',
+        allowInput: true,
+      });
+    }
+
+    const modal = document.getElementById('modalExcluir');
+    const backdrop = document.getElementById('modalExcluirBackdrop');
+    const btnCancelar = document.getElementById('cancelarExcluir');
+    const formExcluir = document.getElementById('formConfirmarExcluir');
+    const textoModal = document.getElementById('textoModalExcluir');
+    const botoes = Array.from(document.querySelectorAll('.btnAbrirModalExcluir'));
+
+    const modalLixeira = document.getElementById('modalLixeira');
+    const backdropLixeira = document.getElementById('modalLixeiraBackdrop');
+    const btnAbrirLixeira = document.getElementById('abrirModalLixeira');
+    const btnFecharLixeira = document.getElementById('fecharModalLixeira');
+
+    function abrirModal(url, descricao) {
+      if (!modal || !backdrop || !formExcluir || !textoModal) {
+        return;
+      }
+      formExcluir.action = url;
+      textoModal.textContent = 'Deseja realmente excluir "' + (descricao || 'esta movimentação') + '"?';
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+      backdrop.classList.remove('hidden');
+      document.body.classList.add('overflow-hidden');
+    }
+
+    function fecharModal() {
+      if (!modal || !backdrop) {
+        return;
+      }
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+      backdrop.classList.add('hidden');
+      document.body.classList.remove('overflow-hidden');
+    }
+
+    function abrirModalLixeira() {
+      if (!modalLixeira || !backdropLixeira) {
+        return;
+      }
+      modalLixeira.classList.remove('hidden');
+      backdropLixeira.classList.remove('hidden');
+      document.body.classList.add('overflow-hidden');
+    }
+
+    function fecharModalLixeira() {
+      if (!modalLixeira || !backdropLixeira) {
+        return;
+      }
+      modalLixeira.classList.add('hidden');
+      backdropLixeira.classList.add('hidden');
+      document.body.classList.remove('overflow-hidden');
+    }
+
+    botoes.forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        abrirModal(btn.getAttribute('data-url'), btn.getAttribute('data-descricao'));
+      });
+    });
+    if (btnCancelar) {
+      btnCancelar.addEventListener('click', fecharModal);
+    }
+    if (backdrop) {
+      backdrop.addEventListener('click', fecharModal);
+    }
+    if (btnAbrirLixeira) {
+      btnAbrirLixeira.addEventListener('click', abrirModalLixeira);
+    }
+    if (btnFecharLixeira) {
+      btnFecharLixeira.addEventListener('click', fecharModalLixeira);
+    }
+    if (backdropLixeira) {
+      backdropLixeira.addEventListener('click', fecharModalLixeira);
+    }
+    document.addEventListener('keydown', function (event) {
+      if (event.key === 'Escape') {
+        fecharModal();
+        fecharModalLixeira();
+      }
+    });
+  })();
+</script>
+{% endblock %}

@@ -1,0 +1,65 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Tags - Finance Flow{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-6xl">
+  <section class="glass-panel rounded-[28px] p-8 shadow-2xl shadow-black/10">
+    <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
+      <div>
+        <p class="text-xs font-semibold uppercase tracking-[0.28em] text-slate-500">Cadastros</p>
+        <h1 class="mt-2 text-3xl font-bold tracking-tight text-white">Tags</h1>
+      </div>
+      <a href="{% url 'contas:nova_tag' %}" class="inline-flex items-center rounded-2xl bg-neonprimary px-5 py-2.5 text-sm font-semibold text-slate-950 transition hover:brightness-110">Nova Tag</a>
+    </div>
+
+    <form method="GET" class="mb-5">
+      <input type="text" name="q" value="{{ query }}" placeholder="Buscar por nome ou plano de conta..." class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-2.5 text-sm text-white outline-none transition focus:border-neonprimary/40" />
+    </form>
+
+    <div class="overflow-x-auto rounded-2xl border border-white/10">
+      <table class="min-w-full divide-y divide-white/10">
+        <thead class="bg-white/5">
+          <tr>
+            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Nome</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Plano de Conta</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Cor</th>
+            <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Ações</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-white/5 bg-black/10">
+          {% for tag in tags %}
+            <tr class="transition hover:bg-white/5">
+              <td class="px-4 py-3 text-sm text-white">{{ tag.nome }}</td>
+              <td class="px-4 py-3 text-sm text-slate-300">{{ tag.plano_conta.nome|default:'-' }}</td>
+              <td class="px-4 py-3 text-sm text-slate-300">
+                {% if tag.cor_hexadecimal %}
+                  <span class="inline-flex items-center gap-2">
+                    <span class="h-4 w-4 rounded-full border border-white/20 bg-white/10"></span>
+                    {{ tag.cor_hexadecimal }}
+                  </span>
+                {% else %}
+                  -
+                {% endif %}
+              </td>
+              <td class="px-4 py-3 text-right text-sm">
+                <div class="inline-flex gap-2">
+                  <a href="{% url 'contas:editar_tag' tag.id %}" class="rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-slate-200 transition hover:bg-white/10">Editar</a>
+                  <form method="POST" action="{% url 'contas:excluir_tag' tag.id %}" onsubmit="return confirm('Confirma exclusão desta tag?');">
+                    {% csrf_token %}
+                    <button type="submit" class="rounded-xl border border-rose-400/30 bg-rose-500/10 px-3 py-1.5 text-rose-200 transition hover:bg-rose-500/20">Excluir</button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="4" class="px-4 py-10 text-center text-sm text-slate-400">Nenhuma tag encontrada.</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+{% endblock %}

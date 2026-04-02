@@ -1,0 +1,479 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Cockpit do Ciclo Ativo - Finance Flow{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-7xl">
+  {% if ciclo_ativo %}
+
+    {% if encerramento_erro == 'saldo' %}
+      <div class="mb-6 rounded-2xl border border-rose-400/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
+        O ciclo so pode ser encerrado quando o saldo final previsto estiver em R$ 0,00. Ajuste com entradas ou saidas antes de finalizar.
+      </div>
+    {% endif %}
+
+    {% if encerramento_info == 'pendentes' %}
+      <div class="mb-6 rounded-2xl border border-amber-400/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+        Ainda existem movimentacoes pendentes. Confirme no modal para efetivar os pendentes e encerrar o ciclo.
+      </div>
+    {% endif %}
+
+    {% if not tem_teto_definido_mes %}
+      <div class="mb-6 rounded-2xl border border-slate-400/20 bg-slate-500/10 px-4 py-3 text-sm text-slate-300">
+        Teto nao definido para este mes.
+      </div>
+    {% endif %}
+
+    <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div>
+            <p class="text-xs font-semibold uppercase tracking-[0.28em] text-slate-500">Ciclo Ativo</p>
+            <h1 class="text-3xl font-bold tracking-tight text-white">{{ ciclo_ativo.data_inicio|date:"d/m/Y" }} - {{ ciclo_ativo.data_fim|date:"d/m/Y" }}</h1>
+        </div>
+
+        <button id="abrirModalNovaMovimentacao" type="button" class="inline-flex items-center justify-center gap-2 rounded-2xl bg-neonprimary px-5 py-2.5 text-sm font-semibold text-slate-950 shadow-lg shadow-neonprimary/20 transition hover:brightness-110">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+            </svg>
+            Nova Movimentacao
+        </button>
+    </div>
+    <hr class="my-6 border-t border-white/10" /> 
+    <section class="grid grid-cols-1 gap-6">
+      <article class="glass-panel rounded-[28px] p-6">
+        
+        <div class="mt-3 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          
+          <div class="flex flex-wrap gap-2">
+            <span class="rounded-full border border-white/10 bg-black/20 px-3 py-1 text-xs uppercase tracking-[0.18em] text-neonprimary">Status: {{ ciclo_ativo.status }}</span>
+            <span class="rounded-full border border-white/10 bg-black/20 px-3 py-1 text-xs uppercase tracking-[0.18em] text-slate-300">Dias restantes: {{ dias_restantes }}</span>
+            <span class="rounded-full border border-white/10 bg-black/20 px-3 py-1 text-xs uppercase tracking-[0.18em] text-slate-300">{{ total_categorias_macro }} categorias macro</span>
+          </div>
+        </div>
+        <div class="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          <div class="rounded-2xl border border-white/10 bg-black/20 p-4">
+            <p class="text-xs uppercase tracking-[0.2em] text-slate-500">Total de Entradas</p>
+            <p class="mt-2 text-lg font-semibold text-white">R$ {{ total_entradas|floatformat:2 }}</p>
+          </div>
+          <div class="rounded-2xl border border-white/10 bg-black/20 p-4">
+            <p class="text-xs uppercase tracking-[0.2em] text-slate-500">Saldo Atual</p>
+            <p class="mt-2 text-lg font-semibold {% if saldo_atual >= 0 %}text-neonprimary{% else %}text-neondanger{% endif %}">R$ {{ saldo_atual|floatformat:2 }}</p>
+          </div>
+          <div class="rounded-2xl border border-white/10 bg-black/20 p-4">
+            <p class="text-xs uppercase tracking-[0.2em] text-slate-500">Saldo Final Previsto</p>
+            <p class="mt-2 text-lg font-semibold {% if saldo_final_previsto >= 0 %}text-neonprimary{% else %}text-neondanger{% endif %}">R$ {{ saldo_final_previsto|floatformat:2 }}</p>
+          </div>
+          <div class="rounded-2xl border border-white/10 bg-black/20 p-4">
+            <p class="text-xs uppercase tracking-[0.2em] text-slate-500">Total de Despesas</p>
+            <p class="mt-2 text-lg font-semibold text-white">R$ {{ total_despesas|floatformat:2 }}</p>
+          </div>
+          <div class="rounded-2xl border border-white/10 bg-black/20 p-4">
+            <p class="text-xs uppercase tracking-[0.2em] text-slate-500">Total de Investimentos</p>
+            <p class="mt-2 text-lg font-semibold text-white">R$ {{ total_investimentos|floatformat:2 }}</p>
+          </div>
+          <div class="rounded-2xl border border-white/10 bg-black/20 p-4">
+            <p class="text-xs uppercase tracking-[0.2em] text-slate-500">Total de Transferencias</p>
+            <p class="mt-2 text-lg font-semibold text-white">R$ {{ total_transferencias|floatformat:2 }}</p>
+          </div>
+        </div>
+      </article>
+
+      <article class="glass-panel rounded-[28px] p-6">
+        <div class="mb-4 flex items-center justify-between">
+          <h3 class="text-xl font-bold text-white">Visao da Tabela</h3>
+          <div class="inline-flex rounded-2xl border border-white/10 bg-black/20 p-1">
+            <a href="?visao=categorias" class="rounded-xl px-3 py-1 text-xs font-semibold uppercase tracking-[0.15em] transition {% if visao_tabela == 'categorias' %}bg-neonprimary text-slate-950{% else %}text-slate-300 hover:bg-white/10{% endif %}">Por Categoria</a>
+            <a href="?visao=movimentacoes" class="rounded-xl px-3 py-1 text-xs font-semibold uppercase tracking-[0.15em] transition {% if visao_tabela == 'movimentacoes' %}bg-neonprimary text-slate-950{% else %}text-slate-300 hover:bg-white/10{% endif %}">Movimentacoes</a>
+          </div>
+        </div>
+
+        {% if visao_tabela == 'movimentacoes' %}
+          <div class="overflow-x-auto rounded-2xl border border-white/10">
+            <table class="min-w-full divide-y divide-white/10">
+              <thead class="bg-white/5">
+                <tr>
+                  <th class="w-10 px-3 py-3 text-center text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Ok</th>
+                  <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Vencimento</th>
+                  <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Tipo</th>
+                  <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Descricao</th>
+                  <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Categoria</th>
+                  <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Conta</th>
+                  <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Status</th>
+                  <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Valor</th>
+                  <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Acoes</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-white/5 bg-black/10">
+                {% for mov in movimentacoes_ciclo %}
+                  <tr class="transition hover:bg-white/5">
+                    <td class="px-3 py-3 text-center text-sm">
+                      {% if mov.status == 'Pendente' %}
+                        <form method="POST" action="{% url 'orcamento:confirmar_movimentacao' mov.id %}" class="inline-flex items-center justify-center">
+                          {% csrf_token %}
+                          <input type="hidden" name="visao" value="movimentacoes" />
+                          <input
+                            type="checkbox"
+                            class="h-4 w-4 cursor-pointer rounded border border-white/20 bg-darkbg text-neonprimary accent-emerald-400"
+                            title="Marcar como efetivado"
+                            onchange="if(this.checked){ this.form.submit(); }"
+                          />
+                        </form>
+                      {% else %}
+                        <span class="inline-block h-4 w-4 rounded border border-transparent"></span>
+                      {% endif %}
+                    </td>
+                    <td class="px-4 py-3 text-sm text-slate-300">{{ mov.data_vencimento|date:"d/m/Y" }}</td>
+                    <td class="px-4 py-3 text-sm text-white">{{ mov.get_tipo_display }}</td>
+                    <td class="px-4 py-3 text-sm text-white">{{ mov.descricao|default:"-" }}</td>
+                    <td class="px-4 py-3 text-sm text-slate-300">{{ mov.plano_conta.nome }}</td>
+                    <td class="px-4 py-3 text-sm text-slate-300">{{ mov.conta_bancaria.nome }}</td>
+                    <td class="px-4 py-3 text-sm text-slate-300">{{ mov.status }}</td>
+                    <td class="px-4 py-3 text-right text-sm font-medium {% if mov.tipo == 'Receita' or mov.tipo == 'TransfEntrada' %}text-neonprimary{% elif mov.tipo == 'Despesa' or mov.tipo == 'TransfSaida' %}text-neondanger{% else %}text-slate-100{% endif %}">R$ {{ mov.valor|floatformat:2 }}</td>
+                    <td class="px-4 py-3 text-right text-sm">
+                      <div class="inline-flex items-center gap-2">
+                        <button
+                          type="button"
+                          class="btnAbrirModalEdicao inline-flex rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-slate-200 transition hover:bg-white/10"
+                          data-url="{% url 'transacoes:painel_edicao' 'movimentacao' mov.id %}?next={{ request.get_full_path|urlencode }}&embed=1"
+                        >
+                          Editar
+                        </button>
+                        <button
+                          type="button"
+                          class="btnAbrirModalExcluir inline-flex rounded-xl border border-rose-300/20 bg-rose-500/10 px-3 py-1.5 text-xs font-medium text-rose-200 transition hover:bg-rose-500/20"
+                          data-url="{% url 'transacoes:excluir_movimentacao' mov.id %}"
+                          data-descricao="{{ mov.descricao|default:'Sem descricao'|escape }}"
+                        >
+                          Excluir
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                {% empty %}
+                  <tr>
+                    <td colspan="9" class="px-4 py-8 text-center text-sm text-slate-400">Nenhuma movimentacao cadastrada neste ciclo.</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <div class="overflow-x-auto rounded-2xl border border-white/10">
+            <table class="min-w-full divide-y divide-white/10">
+              <thead class="bg-white/5">
+                <tr>
+                  <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Plano de Conta</th>
+                  <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Gasto</th>
+                  <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Teto</th>
+                  <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Margem</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-white/5 bg-black/10">
+                {% for categoria in categorias_consumo %}
+                  <tr class="transition hover:bg-white/5">
+                    <td class="px-4 py-3 text-sm text-white">{{ categoria.nome }}</td>
+                    <td class="px-4 py-3 text-right text-sm font-medium text-slate-100">R$ {{ categoria.total_gasto|default:"0.00"|floatformat:2 }}</td>
+                    <td class="px-4 py-3 text-right text-sm font-medium text-slate-100">
+                      {% if categoria.tem_teto_categoria %}
+                        R$ {{ categoria.teto_categoria|floatformat:2 }}
+                      {% else %}
+                        <span class="text-slate-500">-</span>
+                      {% endif %}
+                    </td>
+                    <td class="px-4 py-3 text-right text-sm font-medium {% if categoria.tem_teto_categoria and categoria.margem_categoria >= 0 %}text-neonprimary{% elif categoria.tem_teto_categoria %}text-neondanger{% else %}text-slate-500{% endif %}">
+                      {% if categoria.tem_teto_categoria %}
+                        R$ {{ categoria.margem_categoria|floatformat:2 }}
+                      {% else %}
+                        -
+                      {% endif %}
+                    </td>
+                  </tr>
+                {% empty %}
+                  <tr>
+                    <td colspan="4" class="px-4 py-8 text-center text-sm text-slate-400">Nenhuma categoria de despesa encontrada.</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% endif %}
+      </article>
+
+      <article class="glass-panel rounded-[28px] p-6">
+        <div class="flex items-center justify-between gap-4">
+          <div>
+            <h3 class="text-xl font-bold text-white">Controle do Ciclo</h3>
+            <p class="mt-1 text-sm text-slate-400">Finalize o ciclo para congelar o saldo realizado e iniciar um novo periodo.</p>
+            <p class="mt-2 text-xs text-slate-500">Movimentacoes pendentes: {{ pendentes_count }}</p>
+          </div>
+          {% if encerramento_bloqueado %}
+            <button type="button" disabled class="inline-flex cursor-not-allowed items-center rounded-2xl border border-rose-400/30 bg-rose-500/20 px-5 py-2.5 text-sm font-semibold text-rose-100 opacity-70">Encerrar Ciclo Atual</button>
+          {% elif pendentes_count > 0 %}
+            <button id="abrirModalEncerrarComPendentes" type="button" class="inline-flex items-center rounded-2xl bg-neondanger px-5 py-2.5 text-sm font-semibold text-white transition hover:brightness-110">Encerrar Ciclo Atual</button>
+          {% else %}
+            <form method="POST" action="{% url 'orcamento:encerrar_ciclo' %}">
+              {% csrf_token %}
+              <button type="submit" class="inline-flex items-center rounded-2xl bg-neondanger px-5 py-2.5 text-sm font-semibold text-white transition hover:brightness-110">Encerrar Ciclo Atual</button>
+            </form>
+          {% endif %}
+        </div>
+      </article>
+
+      <div id="modalNovaMovimentacaoBackdrop" class="fixed inset-0 z-40 hidden bg-[#0000] backdrop-blur-sm"></div>
+      <div id="modalNovaMovimentacao" class="fixed inset-0 z-50 hidden overflow-y-auto p-4 md:p-8">
+        <div class="mx-auto max-w-4xl">
+            <div class="mb-3 flex justify-end">
+              <button id="fecharModalNovaMovimentacao" type="button" class="inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm font-medium text-slate-300 transition hover:bg-white/10">Fechar</button>
+            </div>
+            {% include "transacoes/padrao/form_lancamento_parcial.html" %}
+        </div>
+      </div>
+
+      <div id="modalEdicaoMovimentacaoBackdrop" class="fixed inset-0 z-40 hidden bg-black/60 backdrop-blur-sm"></div>
+      <div id="modalEdicaoMovimentacao" class="fixed inset-0 z-50 hidden overflow-y-auto p-4 md:p-8">
+        <div class="mx-auto max-w-5xl">
+          <div class="mb-3 flex justify-end">
+            <button id="fecharModalEdicaoMovimentacao" type="button" class="inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm font-medium text-slate-300 transition hover:bg-white/10">Fechar</button>
+          </div>
+          <article class="glass-panel rounded-[28px] border border-white/10 p-2 md:p-3">
+            <iframe id="iframeEdicaoMovimentacao" title="Editar movimentacao" class="h-[82vh] w-full rounded-2xl border border-white/10 bg-[#0b0c10]"></iframe>
+          </article>
+        </div>
+      </div>
+
+      <div id="modalEncerrarPendentesBackdrop" class="fixed inset-0 z-40 hidden bg-black/60 backdrop-blur-sm"></div>
+      <div id="modalEncerrarPendentes" class="fixed inset-0 z-50 hidden items-center justify-center p-4">
+        <article class="glass-panel w-full max-w-xl rounded-[28px] border border-white/10 p-6 shadow-2xl shadow-black/40">
+          <p class="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Confirmacao</p>
+          <h3 class="mt-2 text-xl font-bold text-white">Existem movimentacoes pendentes</h3>
+          <p class="mt-3 text-sm text-slate-300">
+            Ha {{ pendentes_count }} movimentacao(oes) com status Pendente. Ao confirmar, todas serao marcadas como Efetivado automaticamente e o ciclo sera encerrado.
+          </p>
+          <div class="mt-6 flex items-center justify-end gap-3">
+            <button id="cancelarEncerramentoPendentes" type="button" class="inline-flex items-center rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-slate-300 transition hover:bg-white/10">Cancelar</button>
+            <form method="POST" action="{% url 'orcamento:encerrar_ciclo' %}">
+              {% csrf_token %}
+              <input type="hidden" name="confirmar_pendentes" value="1" />
+              <button type="submit" class="inline-flex items-center rounded-2xl bg-neondanger px-5 py-2.5 text-sm font-semibold text-white transition hover:brightness-110">Confirmar e Encerrar</button>
+            </form>
+          </div>
+        </article>
+      </div>
+
+      <div id="modalExcluirBackdrop" class="fixed inset-0 z-40 hidden bg-black/60 backdrop-blur-sm"></div>
+      <div id="modalExcluir" class="fixed inset-0 z-50 hidden items-center justify-center p-4">
+        <article class="glass-panel w-full max-w-lg rounded-[28px] border border-white/10 p-6 shadow-2xl shadow-black/40">
+          <p class="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Confirmacao</p>
+          <h3 class="mt-2 text-xl font-bold text-white">Excluir movimentacao</h3>
+          <p id="textoModalExcluir" class="mt-3 text-sm text-slate-300">Deseja realmente excluir esta movimentacao?</p>
+          <div class="mt-6 flex items-center justify-end gap-3">
+            <button id="cancelarExcluir" type="button" class="inline-flex items-center rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-slate-300 transition hover:bg-white/10">Cancelar</button>
+            <form id="formConfirmarExcluir" method="POST" action="">
+              {% csrf_token %}
+              <input type="hidden" name="next" value="{{ request.get_full_path }}" />
+              <button type="submit" class="inline-flex items-center rounded-2xl bg-neondanger px-5 py-2.5 text-sm font-semibold text-white transition hover:brightness-110">Confirmar Exclusao</button>
+            </form>
+          </div>
+        </article>
+      </div>
+    </section>
+  {% else %}
+    <section class="mx-auto max-w-2xl">
+      <article class="glass-panel rounded-[28px] p-10">
+        <p class="text-xs font-semibold uppercase tracking-[0.28em] text-slate-500">Orcamento Base Zero</p>
+        <h1 class="mt-3 text-3xl font-bold tracking-tight text-white">Nenhum ciclo ativo no momento.</h1>
+        <p class="mt-3 text-sm text-slate-400">Abra um novo ciclo para iniciar o cockpit e injetar automaticamente contas fixas e lancamentos futuros.</p>
+
+        <form method="POST" action="{% url 'orcamento:abrir_ciclo' %}" class="mt-8 space-y-5">
+          {% csrf_token %}
+          <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
+            <div>
+              <label for="data_inicio" class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Data Inicio</label>
+              <input id="data_inicio" name="data_inicio" type="date" value="{{ hoje|date:'Y-m-d' }}" required class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white outline-none transition focus:border-neonprimary/40" />
+            </div>
+            <div>
+              <label for="data_fim" class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Data Fim</label>
+              <input id="data_fim" name="data_fim" type="date" required class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white outline-none transition focus:border-neonprimary/40" />
+            </div>
+          </div>
+
+          <div class="pt-2">
+            <button type="submit" class="inline-flex items-center rounded-2xl bg-neonprimary px-6 py-2.5 text-sm font-semibold text-slate-950 transition hover:brightness-110">Abrir Novo Ciclo e Injetar Dados</button>
+          </div>
+        </form>
+      </article>
+    </section>
+  {% endif %}
+</div>
+
+{% if ciclo_ativo %}
+  <script>
+    (function () {
+      const btnAbrir = document.getElementById('abrirModalNovaMovimentacao');
+      const btnFechar = document.getElementById('fecharModalNovaMovimentacao');
+      const modal = document.getElementById('modalNovaMovimentacao');
+      const backdrop = document.getElementById('modalNovaMovimentacaoBackdrop');
+      const botoesAbrirEdicao = Array.from(document.querySelectorAll('.btnAbrirModalEdicao'));
+      const btnFecharEdicao = document.getElementById('fecharModalEdicaoMovimentacao');
+      const modalEdicao = document.getElementById('modalEdicaoMovimentacao');
+      const backdropEdicao = document.getElementById('modalEdicaoMovimentacaoBackdrop');
+      const iframeEdicao = document.getElementById('iframeEdicaoMovimentacao');
+
+      const btnAbrirEncerrar = document.getElementById('abrirModalEncerrarComPendentes');
+      const btnCancelarEncerrar = document.getElementById('cancelarEncerramentoPendentes');
+      const modalEncerrar = document.getElementById('modalEncerrarPendentes');
+      const backdropEncerrar = document.getElementById('modalEncerrarPendentesBackdrop');
+
+      const modalExcluir = document.getElementById('modalExcluir');
+      const backdropExcluir = document.getElementById('modalExcluirBackdrop');
+      const btnCancelarExcluir = document.getElementById('cancelarExcluir');
+      const formExcluir = document.getElementById('formConfirmarExcluir');
+      const textoModalExcluir = document.getElementById('textoModalExcluir');
+      const botoesAbrirExcluir = Array.from(document.querySelectorAll('.btnAbrirModalExcluir'));
+
+      if (!btnAbrir || !modal || !backdrop) {
+        return;
+      }
+
+      function abrirModal() {
+        modal.classList.remove('hidden');
+        backdrop.classList.remove('hidden');
+        document.body.classList.add('overflow-hidden');
+      }
+
+      function fecharModal() {
+        modal.classList.add('hidden');
+        backdrop.classList.add('hidden');
+        document.body.classList.remove('overflow-hidden');
+      }
+
+      function abrirModalEdicao(url) {
+        if (!modalEdicao || !backdropEdicao || !iframeEdicao) {
+          return;
+        }
+        iframeEdicao.src = url;
+        modalEdicao.classList.remove('hidden');
+        backdropEdicao.classList.remove('hidden');
+        document.body.classList.add('overflow-hidden');
+      }
+
+      function fecharModalEdicao() {
+        if (!modalEdicao || !backdropEdicao || !iframeEdicao) {
+          return;
+        }
+        const estavaAberto = !modalEdicao.classList.contains('hidden');
+        modalEdicao.classList.add('hidden');
+        backdropEdicao.classList.add('hidden');
+        iframeEdicao.src = '';
+        document.body.classList.remove('overflow-hidden');
+        if (estavaAberto) {
+          window.location.reload();
+        }
+      }
+
+      function abrirModalEncerrar() {
+        if (!modalEncerrar || !backdropEncerrar) {
+          return;
+        }
+        modalEncerrar.classList.remove('hidden');
+        modalEncerrar.classList.add('flex');
+        backdropEncerrar.classList.remove('hidden');
+        document.body.classList.add('overflow-hidden');
+      }
+
+      function fecharModalEncerrar() {
+        if (!modalEncerrar || !backdropEncerrar) {
+          return;
+        }
+        modalEncerrar.classList.add('hidden');
+        modalEncerrar.classList.remove('flex');
+        backdropEncerrar.classList.add('hidden');
+        document.body.classList.remove('overflow-hidden');
+      }
+
+      function abrirModalExcluir(url, descricao) {
+        if (!modalExcluir || !backdropExcluir || !formExcluir || !textoModalExcluir) {
+          return;
+        }
+        formExcluir.action = url;
+        textoModalExcluir.textContent = 'Deseja realmente excluir "' + (descricao || 'esta movimentacao') + '"?';
+        modalExcluir.classList.remove('hidden');
+        modalExcluir.classList.add('flex');
+        backdropExcluir.classList.remove('hidden');
+        document.body.classList.add('overflow-hidden');
+      }
+
+      function fecharModalExcluir() {
+        if (!modalExcluir || !backdropExcluir) {
+          return;
+        }
+        modalExcluir.classList.add('hidden');
+        modalExcluir.classList.remove('flex');
+        backdropExcluir.classList.add('hidden');
+        document.body.classList.remove('overflow-hidden');
+      }
+
+      btnAbrir.addEventListener('click', abrirModal);
+      if (btnFechar) {
+        btnFechar.addEventListener('click', fecharModal);
+      }
+      backdrop.addEventListener('click', fecharModal);
+
+      botoesAbrirEdicao.forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          const url = btn.getAttribute('data-url');
+          if (url) {
+            abrirModalEdicao(url);
+          }
+        });
+      });
+      if (btnFecharEdicao) {
+        btnFecharEdicao.addEventListener('click', fecharModalEdicao);
+      }
+      if (backdropEdicao) {
+        backdropEdicao.addEventListener('click', fecharModalEdicao);
+      }
+
+      if (btnAbrirEncerrar) {
+        btnAbrirEncerrar.addEventListener('click', abrirModalEncerrar);
+      }
+      if (btnCancelarEncerrar) {
+        btnCancelarEncerrar.addEventListener('click', fecharModalEncerrar);
+      }
+      if (backdropEncerrar) {
+        backdropEncerrar.addEventListener('click', fecharModalEncerrar);
+      }
+
+      botoesAbrirExcluir.forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          abrirModalExcluir(btn.getAttribute('data-url'), btn.getAttribute('data-descricao'));
+        });
+      });
+      if (btnCancelarExcluir) {
+        btnCancelarExcluir.addEventListener('click', fecharModalExcluir);
+      }
+      if (backdropExcluir) {
+        backdropExcluir.addEventListener('click', fecharModalExcluir);
+      }
+
+      window.addEventListener('message', function (event) {
+        if (event.origin !== window.location.origin) {
+          return;
+        }
+        if (!event.data || event.data.type !== 'painel-edicao-salvo') {
+          return;
+        }
+        fecharModalEdicao();
+      });
+
+      document.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape') {
+          fecharModal();
+          fecharModalEdicao();
+          fecharModalEncerrar();
+          fecharModalExcluir();
+        }
+      });
+    })();
+  </script>
+{% endif %}
+{% endblock %}

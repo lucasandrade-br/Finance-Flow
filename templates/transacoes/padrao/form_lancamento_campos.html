@@ -1,0 +1,117 @@
+<!-- Apenas os campos do formulário, para ser incluído no parcial e no wrapper -->
+<div class="grid grid-cols-1 gap-5 md:grid-cols-2">
+  <div>
+    <label for="tipo" class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Tipo</label>
+    <select id="tipo" name="tipo" required class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white outline-none transition focus:border-neonprimary/40">
+      <option value="Receita" {% if tipo_default_form == 'Receita' %}selected{% endif %}>Receita</option>
+      <option value="Despesa" {% if tipo_default_form == 'Despesa' or not tipo_default_form %}selected{% endif %}>Despesa</option>
+      <option value="Investimento" {% if tipo_default_form == 'Investimento' %}selected{% endif %}>Investimento</option>
+      <option value="Transferencia" {% if tipo_default_form == 'Transferencia' %}selected{% endif %}>Transferência</option>
+    </select>
+  </div>
+  <div>
+    <label for="valor_visual" class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Valor</label>
+    <input id="valor_visual" type="text" required class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white outline-none transition focus:border-neonprimary/40" placeholder="0,00" />
+    <input id="valor_real" name="valor" type="hidden" />
+  </div>
+</div>
+<div>
+  <label for="tagsSelect2" class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Destino</label>
+  <div class="flex gap-2">
+    <select id="tagsSelect2" name="tags" multiple class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white outline-none transition focus:border-neonprimary/40"></select>
+    <button type="button" id="btnNovaTag" class="shrink-0 rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm font-medium text-slate-300 transition hover:border-neonprimary/30 hover:bg-neonprimary/10 hover:text-neonprimary" title="Criar nova tag">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+      </svg>
+    </button>
+  </div>
+</div>
+{% if erro_formulario %}
+  <div class="rounded-2xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">{{ erro_formulario }}</div>
+{% endif %}
+<div class="grid grid-cols-1 gap-5 md:grid-cols-2">
+  <div>
+    <label for="plano_conta_id" class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Plano de Conta</label>
+    <select id="plano_conta_id" name="plano_conta_id" required class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white outline-none transition focus:border-neonprimary/40">
+      {% for plano in plano_contas %}
+        <option value="{{ plano.id }}" data-tipo="{{ plano.tipo_natureza }}">{{ plano.codigo }} - {{ plano.nome }}</option>
+      {% empty %}
+        <option value="">Nenhum plano de conta cadastrado</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div>
+    <label for="conta_bancaria_id" class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Conta Bancária</label>
+    <select id="conta_bancaria_id" name="conta_bancaria_id" required class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white outline-none transition focus:border-neonprimary/40">
+      {% for conta in contas %}
+        <option value="{{ conta.id }}">{{ conta.nome }} ({{ conta.get_tipo_display }})</option>
+      {% empty %}
+        <option value="">Nenhuma conta cadastrada</option>
+      {% endfor %}
+    </select>
+  </div>
+</div>
+<div class="grid grid-cols-1 gap-5 md:grid-cols-2">
+  <div>
+    <label for="formato_pagamento" class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Forma de Pagamento</label>
+    <select id="formato_pagamento" name="formato_pagamento" required class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white outline-none transition focus:border-neonprimary/40">
+      <option value="PIX" selected>PIX</option>
+      <option value="Cartao">Cartão</option>
+      <option value="Boleto">Boleto</option>
+      <option value="Dinheiro">Dinheiro</option>
+      <option value="Debito">Débito</option>
+      <option value="TED">TED</option>
+      <option value="DOC">DOC</option>
+    </select>
+  </div>
+  <div>
+    <label for="frequencia" class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Frequência</label>
+    <select id="frequencia" name="frequencia" required class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white outline-none transition focus:border-neonprimary/40">
+      <option value="Variavel" selected>Variável</option>
+      <option value="Fixa">Fixa</option>
+      <option value="Anual">Anual</option>
+    </select>
+  </div>
+</div>
+<div class="grid grid-cols-1 gap-5 md:grid-cols-2">
+  <div>
+    <label for="status" class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Status</label>
+    <select id="status" name="status" required class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white outline-none transition focus:border-neonprimary/40">
+      <option value="Pendente" {% if status_default_form == 'Pendente' %}selected{% endif %}>Pendente</option>
+      <option value="Efetivado" {% if status_default_form == 'Efetivado' or not status_default_form %}selected{% endif %}>Efetivado</option>
+      <option value="Reagendado" {% if status_default_form == 'Reagendado' %}selected{% endif %}>Reagendado</option>
+      <option value="Validado" {% if status_default_form == 'Validado' %}selected{% endif %}>Validado</option>
+    </select>
+  </div>
+  <div id="contaDestinoWrapper" class="hidden">
+    <label for="conta_destino_id" class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Conta Destino (Transferência)</label>
+    <select id="conta_destino_id" name="conta_destino_id" class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white outline-none transition focus:border-neonprimary/40">
+      <option value="">Selecione a conta destino...</option>
+      {% for conta in contas %}
+        <option value="{{ conta.id }}">{{ conta.nome }} ({{ conta.get_tipo_display }})</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div>
+    <label for="data_pagamento" class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Data de Pagamento</label>
+    <input id="data_pagamento" name="data_pagamento" type="date" value="{{ hoje|date:'Y-m-d' }}" required class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white outline-none transition focus:border-neonprimary/40" />
+  </div>
+</div>
+
+<div>
+  <label for="comprovante" class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Comprovante (Opcional)</label>
+  <input id="comprovante" name="comprovante" type="file" accept=".pdf,.jpg,.jpeg,.png,.gif" class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white outline-none transition file:mr-3 file:rounded-lg file:border-0 file:bg-neonprimary/20 file:px-3 file:py-1 file:text-xs file:font-medium file:text-neonprimary file:cursor-pointer hover:border-white/20 focus:border-neonprimary/40" />
+  <p class="mt-1 text-xs text-slate-500">Formatos aceitos: PDF, JPG, PNG, GIF (máx. 5MB)</p>
+</div>
+<div>
+  <label for="descricao" class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Descrição</label>
+  <input id="descricao" name="descricao" type="text" class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white outline-none transition focus:border-neonprimary/40" placeholder="Ex.: Supermercado, Aluguel, Salário" />
+</div>
+<div class="flex items-center justify-end gap-3 pt-4">
+  {% if cancel_url %}
+    <a href="{{ cancel_url }}" class="inline-flex items-center rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-slate-300 transition hover:border-white/20 hover:bg-white/10">Cancelar</a>
+  {% else %}
+    <a href="{% url 'transacoes:livro_razao' %}" class="inline-flex items-center rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-slate-300 transition hover:border-white/20 hover:bg-white/10">Cancelar</a>
+  {% endif %}
+  <button type="submit" class="inline-flex items-center rounded-2xl bg-neonprimary px-5 py-2 text-sm font-semibold text-slate-950 transition hover:brightness-110">Salvar Transação</button>
+</div>

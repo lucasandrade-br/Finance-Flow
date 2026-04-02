@@ -1,0 +1,122 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Painel da Meta - {{ meta.nome }}{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-7xl">
+  <section class="glass-panel rounded-[28px] p-8 shadow-2xl shadow-black/10">
+    <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
+      <div>
+        <p class="text-xs font-semibold uppercase tracking-[0.28em] text-slate-500">Evolução da Meta</p>
+        <h1 class="mt-2 text-3xl font-bold tracking-tight text-white">{{ meta.nome }}</h1>
+        <p class="mt-2 text-sm text-slate-400">Conta: {{ meta.conta_bancaria.nome }} | Período: {{ meta.data_inicio|date:"m/Y" }} - {{ meta.data_fim|date:"m/Y" }}</p>
+      </div>
+      <div class="inline-flex items-center gap-2">
+        <a href="{% url 'investimentos:lista_metas' %}" class="inline-flex items-center rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-slate-300 transition hover:bg-white/10">Voltar</a>
+        <a href="{% url 'investimentos:roteiro_meta' meta.id %}" class="inline-flex items-center rounded-2xl border border-neonprimary/30 bg-neonprimary/10 px-4 py-2 text-sm font-medium text-neonprimary transition hover:brightness-110">Editar Roteiro</a>
+      </div>
+    </div>
+
+    <div class="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div class="rounded-2xl border border-white/10 bg-black/20 p-4">
+        <p class="text-xs uppercase tracking-[0.2em] text-slate-500">Meta</p>
+        <p class="mt-2 text-lg font-semibold text-white">R$ {{ meta.valor_alvo|floatformat:2 }}</p>
+      </div>
+      <div class="rounded-2xl border border-white/10 bg-black/20 p-4">
+        <p class="text-xs uppercase tracking-[0.2em] text-slate-500">Realizado</p>
+        <p class="mt-2 text-lg font-semibold text-neonprimary">R$ {{ valor_realizado|floatformat:2 }}</p>
+      </div>
+      <div class="rounded-2xl border border-white/10 bg-black/20 p-4">
+        <p class="text-xs uppercase tracking-[0.2em] text-slate-500">Faltante</p>
+        <p class="mt-2 text-lg font-semibold {% if valor_faltante <= 0 %}text-neonprimary{% else %}text-amber-200{% endif %}">R$ {{ valor_faltante|floatformat:2 }}</p>
+      </div>
+      <div class="rounded-2xl border border-white/10 bg-black/20 p-4">
+        <p class="text-xs uppercase tracking-[0.2em] text-slate-500">% Alcançado</p>
+        <p class="mt-2 text-lg font-semibold {% if percentual_alcancado >= 100 %}text-neonprimary{% else %}text-white{% endif %}">{{ percentual_alcancado|floatformat:2 }}%</p>
+      </div>
+    </div>
+
+    <article class="rounded-2xl border border-white/10 bg-black/20 p-4">
+      <canvas id="graficoMeta" height="110"></canvas>
+    </article>
+  </section>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{{ labels|json_script:"meta-labels" }}
+{{ planejado_series|json_script:"meta-planejado" }}
+{{ realizado_series|json_script:"meta-realizado" }}
+{{ acumulado_planejado_series|json_script:"meta-acumulado-planejado" }}
+{{ acumulado_realizado_series|json_script:"meta-acumulado-realizado" }}
+<script>
+  (function () {
+    const ctx = document.getElementById('graficoMeta');
+    if (!ctx || !window.Chart) {
+      return;
+    }
+
+    const labels = JSON.parse(document.getElementById('meta-labels').textContent);
+    const planejado = JSON.parse(document.getElementById('meta-planejado').textContent);
+    const realizado = JSON.parse(document.getElementById('meta-realizado').textContent);
+    const acumuladoPlanejado = JSON.parse(document.getElementById('meta-acumulado-planejado').textContent);
+    const acumuladoRealizado = JSON.parse(document.getElementById('meta-acumulado-realizado').textContent);
+
+    new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: labels,
+        datasets: [
+          {
+            label: 'Planejado (mensal)',
+            data: planejado,
+            backgroundColor: 'rgba(148, 163, 184, 0.35)',
+            borderColor: 'rgba(148, 163, 184, 1)',
+            borderWidth: 1,
+            yAxisID: 'y',
+          },
+          {
+            label: 'Realizado (mensal)',
+            data: realizado,
+            backgroundColor: 'rgba(16, 185, 129, 0.35)',
+            borderColor: 'rgba(16, 185, 129, 1)',
+            borderWidth: 1,
+            yAxisID: 'y',
+          },
+          {
+            label: 'Planejado Acumulado',
+            data: acumuladoPlanejado,
+            borderColor: 'rgba(244, 114, 182, 1)',
+            backgroundColor: 'rgba(244, 114, 182, 0.15)',
+            borderWidth: 2,
+            pointRadius: 2,
+            type: 'line',
+            yAxisID: 'y',
+          },
+          {
+            label: 'Realizado Acumulado',
+            data: acumuladoRealizado,
+            borderColor: 'rgba(16, 185, 129, 1)',
+            backgroundColor: 'rgba(16, 185, 129, 0.15)',
+            borderWidth: 2,
+            pointRadius: 2,
+            type: 'line',
+            yAxisID: 'y',
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: {
+            labels: { color: '#cbd5e1' }
+          }
+        },
+        scales: {
+          x: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+          y: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(255,255,255,0.06)' } }
+        }
+      }
+    });
+  })();
+</script>
+{% endblock %}

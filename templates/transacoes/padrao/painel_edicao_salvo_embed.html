@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Salvando...</title>
+  <style>
+    body {
+      margin: 0;
+      background: #0b0c10;
+      color: #cbd5e1;
+      font-family: Inter, system-ui, -apple-system, sans-serif;
+      display: grid;
+      place-items: center;
+      min-height: 100vh;
+    }
+  </style>
+</head>
+<body>
+  <p>Salvo com sucesso. Atualizando...</p>
+  <script>
+    (function () {
+      const payload = {
+        type: 'painel-edicao-salvo',
+        redirect_url: '{{ redirect_url|escapejs }}'
+      };
+
+      try {
+        if (window.parent && window.parent !== window) {
+          window.parent.postMessage(payload, window.location.origin);
+          return;
+        }
+      } catch (e) {
+        // fallback abaixo
+      }
+
+      window.location.href = payload.redirect_url || '/';
+    })();
+  </script>
+</body>
+</html>

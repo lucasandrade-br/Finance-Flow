@@ -1,0 +1,58 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Metas Financeiras - Finance Flow{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-7xl">
+  <section class="glass-panel rounded-[28px] p-8 shadow-2xl shadow-black/10">
+    <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
+      <div>
+        <p class="text-xs font-semibold uppercase tracking-[0.28em] text-slate-500">Planejamento</p>
+        <h1 class="mt-2 text-3xl font-bold tracking-tight text-white">Metas Financeiras</h1>
+      </div>
+      <a href="{% url 'investimentos:nova_meta' %}" class="inline-flex items-center rounded-2xl bg-neonprimary px-5 py-2.5 text-sm font-semibold text-slate-950 transition hover:brightness-110">Nova Meta</a>
+    </div>
+
+    <div class="overflow-x-auto rounded-2xl border border-white/10">
+      <table class="min-w-full divide-y divide-white/10">
+        <thead class="bg-white/5">
+          <tr>
+            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Meta</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Conta</th>
+            <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Saldo Atual</th>
+            <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Meta</th>
+            <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">% Alcançado</th>
+            <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Ações</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-white/5 bg-black/10">
+          {% for meta in metas %}
+            <tr class="transition hover:bg-white/5">
+              <td class="px-4 py-3 text-sm text-white">
+                <p class="font-medium">{{ meta.nome }}</p>
+                <p class="text-xs text-slate-500">{{ meta.data_inicio|date:"m/Y" }} até {{ meta.data_fim|date:"m/Y" }}</p>
+              </td>
+              <td class="px-4 py-3 text-sm text-slate-200">{{ meta.conta_bancaria.nome }}</td>
+              <td class="px-4 py-3 text-right text-sm {% if meta.saldo_atual >= 0 %}text-neonprimary{% else %}text-neondanger{% endif %}">R$ {{ meta.saldo_atual|floatformat:2 }}</td>
+              <td class="px-4 py-3 text-right text-sm text-slate-100">R$ {{ meta.valor_alvo|floatformat:2 }}</td>
+              <td class="px-4 py-3 text-right text-sm">
+                <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold {% if meta.percentual_alcancado >= 100 %}bg-neonprimary/20 text-neonprimary{% elif meta.percentual_alcancado >= 70 %}bg-amber-400/20 text-amber-200{% else %}bg-rose-500/20 text-rose-200{% endif %}">{{ meta.percentual_alcancado|floatformat:2 }}%</span>
+              </td>
+              <td class="px-4 py-3 text-right text-sm">
+                <div class="inline-flex items-center gap-2">
+                  <a href="{% url 'investimentos:roteiro_meta' meta.id %}" class="inline-flex rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-slate-200 transition hover:bg-white/10">Roteiro</a>
+                  <a href="{% url 'investimentos:painel_meta' meta.id %}" class="inline-flex rounded-xl border border-neonprimary/30 bg-neonprimary/10 px-3 py-1.5 text-xs font-medium text-neonprimary transition hover:brightness-110">Painel</a>
+                </div>
+              </td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="6" class="px-4 py-10 text-center text-sm text-slate-400">Nenhuma meta cadastrada até o momento.</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+{% endblock %}

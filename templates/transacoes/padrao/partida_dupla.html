@@ -1,0 +1,134 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Nova Operação — Partida Dupla{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-5xl flex flex-col md:flex-row gap-8">
+  <!-- Formulário de lançamento (reutilizável) -->
+  <div class="flex-1">
+    
+      
+      <div id="form-lancamento-container">
+        {% include "transacoes/padrao/form_lancamento_parcial.html" %}
+      </div>
+   
+  </div>
+
+  <!-- Painel lateral de cards (buffer) -->
+  <div class="w-full md:w-[380px]">
+    <section class="glass-panel rounded-[28px] p-6 shadow-2xl shadow-black/10 flex flex-col h-full">
+      <h2 class="text-lg font-semibold text-white mb-4">Lançamentos da Operação</h2>
+      <div id="buffer-cards" class="flex flex-col gap-3 mb-4">
+        <!-- Cards dos lançamentos adicionados aparecerão aqui -->
+      </div>
+      <div class="flex items-center justify-between mt-auto pt-4 border-t border-white/10">
+        <span class="text-sm text-slate-400">Saldo da operação:</span>
+        <span id="saldo-operacao" class="text-lg font-bold">R$ 0,00</span>
+      </div>
+      <button id="btn-confirmar-operacao" class="mt-6 w-full rounded-2xl bg-neonprimary px-5 py-3 text-sm font-semibold text-slate-950 transition hover:brightness-110 disabled:opacity-50" disabled>Confirmar Operação</button>
+    </section>
+  </div>
+</div>
+
+<script>
+// Buffer de lançamentos (apenas no front, pode ser migrado para sessão/back depois)
+let bufferLancamentos = [];
+
+function atualizarPainelBuffer() {
+  const bufferDiv = document.getElementById('buffer-cards');
+  bufferDiv.innerHTML = '';
+  let saldo = 0;
+  bufferLancamentos.forEach((lanc, idx) => {
+    // Card visual
+    const card = document.createElement('div');
+    card.className = 'rounded-xl bg-darkbg border border-white/10 p-4 flex flex-col gap-1 relative';
+    card.innerHTML = `
+      <div class="flex items-center justify-between">
+        <span class="font-semibold text-white">${lanc.tipo}</span>
+        <button type="button" class="text-xs text-neondanger hover:underline" onclick="removerLancamento(${idx})">Remover</button>
+      </div>
+      <div class="text-slate-300 text-sm">${lanc.descricao || ''}</div>
+      <div class="flex items-center justify-between mt-1">
+        <span class="text-xs text-slate-400">${lanc.data_pagamento || ''}</span>
+        <span class="font-bold ${lanc.tipo === 'Receita' ? 'text-neonprimary' : 'text-neondanger'}">${lanc.tipo === 'Receita' ? '+' : '-'}R$ ${parseFloat(lanc.valor).toLocaleString('pt-BR', {minimumFractionDigits:2})}</span>
+      </div>
+    `;
+    bufferDiv.appendChild(card);
+    saldo += (lanc.tipo === 'Receita' ? 1 : -1) * parseFloat(lanc.valor);
+  });
+  // Atualiza saldo
+  document.getElementById('saldo-operacao').textContent = `R$ ${saldo.toLocaleString('pt-BR', {minimumFractionDigits:2})}`;
+  // Habilita botão se saldo for zero e houver pelo menos 2 lançamentos
+  document.getElementById('btn-confirmar-operacao').disabled = !(bufferLancamentos.length > 1 && Math.abs(saldo) < 0.01);
+}
+
+function removerLancamento(idx) {
+  bufferLancamentos.splice(idx, 1);
+  atualizarPainelBuffer();
+}
+
+// Intercepta submit do form para adicionar ao buffer
+function interceptarFormLancamento() {
+  const form = document.querySelector('#form-lancamento-container form');
+  if (!form) return;
+  form.addEventListener('submit', function(e) {
+    e.preventDefault();
+    // Extrai todos os campos obrigatórios do form
+    const tipo = form.tipo.value;
+    const valor = form.valor.value;
+    const descricao = form.descricao.value;
+    const data_pagamento = form.data_pagamento.value;
+    const plano_conta_id = form.plano_conta_id.value;
+    const conta_bancaria_id = form.conta_bancaria_id.value;
+    const status = form.status.value;
+    const formato_pagamento = form.formato_pagamento.value;
+    // Extrai tags (Select2 múltiplo)
+    let tag_ids = [];
+    if (window.jQuery && $(form.tagsSelect2).length) {
+      tag_ids = $(form.tagsSelect2).val() || [];
+    } else if (form.tagsSelect2) {
+      // fallback para select padrão
+      tag_ids = Array.from(form.tagsSelect2.selectedOptions).map(opt => opt.value);
+    }
+    if (!tipo || !valor || !descricao || !plano_conta_id || !conta_bancaria_id) return;
+    bufferLancamentos.push({
+      tipo,
+      valor,
+      descricao,
+      data_pagamento,
+      plano_conta_id,
+      conta_bancaria_id,
+      status,
+      formato_pagamento,
+      tag_ids
+    });
+    atualizarPainelBuffer();
+    form.reset();
+    // Mantém tipo padrão como Despesa
+    form.tipo.value = 'Despesa';
+    if (window.jQuery && $(form.tipo).data('select2')) $(form.tipo).val('Despesa').trigger('change');
+  });
+}
+
+// Confirma operação: envia todos os lançamentos para o backend
+function setupConfirmarOperacao() {
+  document.getElementById('btn-confirmar-operacao').addEventListener('click', function() {
+    if (bufferLancamentos.length < 2) return;
+    // Envia via POST (AJAX ou form oculto)
+    fetch(window.location.pathname, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json', 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value},
+      body: JSON.stringify({lancamentos: bufferLancamentos})
+    }).then(resp => {
+      if (resp.ok) window.location.href = '{% url "transacoes:livro_razao" %}';
+      else alert('Erro ao salvar operação.');
+    });
+  });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  interceptarFormLancamento();
+  setupConfirmarOperacao();
+});
+</script>
+{% endblock %}
