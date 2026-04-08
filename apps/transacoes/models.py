@@ -29,6 +29,7 @@ class Frequencia(models.TextChoices):
     FIXA = 'Fixa', 'Fixa'
     VARIAVEL = 'Variavel', 'Variável'
     ANUAL = 'Anual', 'Anual'
+    UNICA = 'Unica', 'Única/Ocasional'
 
 
 # ---------------------------------------------------------------------------
@@ -293,3 +294,44 @@ class MovimentacaoExcluida(ModeloBase):
 
     def __str__(self):
         return f'[EXCLUÍDA] {self.descricao or "Sem descrição"} | R$ {self.valor}'
+
+
+class AliasImportacao(ModeloBase):
+    class Entidade(models.TextChoices):
+        TAG = 'Tag', 'Tag'
+        PLANO_CONTA = 'PlanoConta', 'Plano de Conta'
+        CONTA_BANCARIA = 'ContaBancaria', 'Conta Bancária'
+
+    entidade = models.CharField(max_length=20, choices=Entidade.choices)
+    valor_externo = models.CharField(max_length=180)
+    tag = models.ForeignKey(
+        'contas.Tag',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='aliases_importacao',
+    )
+    plano_conta = models.ForeignKey(
+        'contas.PlanoConta',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='aliases_importacao',
+    )
+    conta_bancaria = models.ForeignKey(
+        'contas.ContaBancaria',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='aliases_importacao',
+    )
+    ativo = models.BooleanField(default=True)
+
+    class Meta:
+        verbose_name = 'Alias de Importação'
+        verbose_name_plural = 'Aliases de Importação'
+        ordering = ['entidade', 'valor_externo']
+        unique_together = [('entidade', 'valor_externo')]
+
+    def __str__(self):
+        return f'{self.entidade}: {self.valor_externo}'

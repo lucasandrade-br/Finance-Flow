@@ -69,9 +69,9 @@ Suporte à Decisão: Base de dados preparada para rodar algoritmos em Python que
 
 Orçamento Sazonal (Baseado em Dados): Painel de planejamento para definir limites de gastos e metas de investimento mês a mês (e não limites fixos anuais). O sistema utiliza inteligência de dados para sugerir valores baseando-se na média de gastos históricos do mesmo período.
 
-Cofres (Metas Financeiras): Envelopes virtuais com barras de progresso, alimentados pelo macro-planejamento mensal e pelos excedentes de fechamentos de ciclo.
+Metas Financeiras: Definição de um valor futuro para uma conta bancária em específico
 
-Simulador de Impacto: Ferramenta que projeta o impacto de uma nova dívida/parcelamento nos orçamentos dos próximos meses.
+Simulador de Impacto: Ferramenta que projeta o impacto de uma nova dívida/parcelamento nos orçamentos dos próximos meses. (PENDENTE)
 
 Termômetro do Ciclo (Burn Rate): Indicador visual que cruza o tempo decorrido do ciclo atual com a verba gasta nas contas (ignorando transferências).
 
@@ -149,8 +149,8 @@ Tabela Cofre: (NOME, VALOR_META, DATA_ALVO, SALDO_ATUAL, STATUS).
 
 O sistema adotará uma identidade visual moderna, minimalista e focada na imersão dos dados, inspirada no design de plataformas financeiras de vanguarda.
 
-Fontes de inspiração: https://lp.pierre.finance/?r=0
-
+Fontes de inspiração: 
+https://lp.pierre.finance/?r=0
 https://www.framer.com/?utm_source=landbook&utm_medium=paid&dub_id=Gs09TGcQrdrGVTLq
 
 5.1. Identidade Visual e Tematização

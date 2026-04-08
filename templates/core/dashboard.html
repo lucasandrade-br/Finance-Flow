@@ -21,34 +21,39 @@
     </a>
   </div>
 
-  <div class="mt-8 grid grid-cols-1 gap-6 md:grid-cols-3">
-    <section class="glass-panel rounded-[28px] p-6 shadow-2xl shadow-black/10">
-      <div class="flex items-start justify-between gap-4">
-        <div>
-          <p class="text-xs font-semibold uppercase tracking-[0.28em] text-gray-500">Saldo Consolidado</p>
-          <h2 class="mt-4 text-4xl font-bold text-white">R$ {{ saldo_total|floatformat:2 }}</h2>
-          <p class="mt-2 text-sm text-slate-400">Posição consolidada entre contas, cofres e reservas.</p>
+  <div class="mt-8 grid grid-cols-1 gap-6 xl:grid-cols-3">
+    <div class="grid grid-cols-1 gap-6 md:grid-cols-2 xl:col-span-2">
+      <section class="glass-panel rounded-[28px] p-6 shadow-2xl shadow-black/10">
+        <div class="flex items-start justify-between gap-4">
+          <div>
+            <p class="text-xs font-semibold uppercase tracking-[0.28em] text-slate-500">Acesso Rápido</p>
+            <h2 class="mt-4 text-2xl font-semibold text-white">Operações do Dia</h2>
+            <p class="mt-2 text-sm text-slate-400">Atalhos para ações frequentes do fluxo operacional.</p>
+          </div>
+          <div class="rounded-2xl bg-neonaccent/10 p-3 text-neonaccent">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </div>
         </div>
-        <div class="rounded-2xl bg-neonprimary/10 p-3 text-neonprimary">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M3 17l6-6 4 4 8-8" />
-          </svg>
-        </div>
-      </div>
 
-      <div class="mt-8 grid gap-3">
-        <div class="rounded-2xl bg-emerald-500/10 px-4 py-3 ring-1 ring-emerald-400/10">
-          <p class="text-xs font-medium uppercase tracking-[0.22em] text-emerald-300/70">Receitas</p>
-          <p class="mt-2 text-xl font-semibold text-emerald-300">+ R$ {{ receitas_mes|floatformat:2 }}</p>
+        <div class="mt-8 space-y-3">
+          <a href="{% url 'core:dashboard_analitico' %}" class="flex w-full items-center justify-between rounded-2xl border border-white/5 bg-white/5 px-4 py-4 text-left text-sm font-medium text-slate-200 transition hover:border-neonprimary/30 hover:bg-neonprimary/10">
+            <span>Dashboard Analitico</span>
+            <span class="text-neonprimary">Abrir</span>
+          </a>
+          <a href="{% url 'orcamento:cockpit_ciclo' %}" class="flex w-full items-center justify-between rounded-2xl border border-white/5 bg-white/5 px-4 py-4 text-left text-sm font-medium text-slate-200 transition hover:border-neonaccent/30 hover:bg-neonaccent/10">
+            <span>Cockpit do Ciclo</span>
+            <span class="text-neonaccent">Abrir</span>
+          </a>
+          <a href="{% url 'transacoes:lista_futuros' %}" class="flex w-full items-center justify-between rounded-2xl border border-white/5 bg-white/5 px-4 py-4 text-left text-sm font-medium text-slate-200 transition hover:border-cyan-400/30 hover:bg-cyan-400/10">
+            <span>Lancamentos Futuros</span>
+            <span class="text-cyan-300">Abrir</span>
+          </a>
         </div>
-        <div class="rounded-2xl bg-rose-500/10 px-4 py-3 ring-1 ring-rose-400/10">
-          <p class="text-xs font-medium uppercase tracking-[0.22em] text-rose-300/70">Despesas</p>
-          <p class="mt-2 text-xl font-semibold text-rose-300">- R$ {{ despesas_mes|floatformat:2 }}</p>
-        </div>
-      </div>
-    </section>
+      </section>
 
-    <section class="glass-panel rounded-[28px] p-6 shadow-2xl shadow-black/10">
+      <section class="glass-panel rounded-[28px] p-6 shadow-2xl shadow-black/10">
       {% if ciclo_ativo %}
         <div class="flex items-start justify-between gap-4">
           <div>
@@ -110,92 +115,10 @@
           </form>
         </div>
       {% endif %}
-    </section>
+      </section>
+    </div>
 
-    <section class="glass-panel rounded-[28px] p-6 shadow-2xl shadow-black/10">
-      <div class="flex items-start justify-between gap-4">
-        <div>
-          <p class="text-xs font-semibold uppercase tracking-[0.28em] text-slate-500">Acesso Rápido</p>
-          <h2 class="mt-4 text-2xl font-semibold text-white">Operações do Dia</h2>
-          <p class="mt-2 text-sm text-slate-400">Atalhos para ações frequentes do fluxo operacional.</p>
-        </div>
-        <div class="rounded-2xl bg-neonaccent/10 p-3 text-neonaccent">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-          </svg>
-        </div>
-      </div>
-
-      <div class="mt-8 space-y-3">
-        <button class="flex w-full items-center justify-between rounded-2xl border border-white/5 bg-white/5 px-4 py-4 text-left text-sm font-medium text-slate-200 transition hover:border-neonprimary/30 hover:bg-neonprimary/10">
-          <span>Transferir para Cofre</span>
-          <span class="text-neonprimary">Abrir</span>
-        </button>
-        <button class="flex w-full items-center justify-between rounded-2xl border border-white/5 bg-white/5 px-4 py-4 text-left text-sm font-medium text-slate-200 transition hover:border-neonaccent/30 hover:bg-neonaccent/10">
-          <span>Analisar Faturas</span>
-          <span class="text-neonaccent">Abrir</span>
-        </button>
-        <button class="flex w-full items-center justify-between rounded-2xl border border-white/5 bg-white/5 px-4 py-4 text-left text-sm font-medium text-slate-200 transition hover:border-cyan-400/30 hover:bg-cyan-400/10">
-          <span>Sincronizar OFX</span>
-          <span class="text-cyan-300">Iniciar</span>
-        </button>
-      </div>
-    </section>
-  </div>
-
-  <div class="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-3">
-    <section class="glass-panel rounded-[28px] p-6 shadow-2xl shadow-black/10 xl:col-span-2">
-      <div class="flex items-center justify-between gap-4">
-        <div>
-          <p class="text-xs font-semibold uppercase tracking-[0.28em] text-slate-500">Últimas Movimentações</p>
-          <h2 class="mt-3 text-2xl font-semibold text-white">Fluxo Recente</h2>
-        </div>
-        <a href="{% url 'transacoes:livro_razao' %}" class="text-sm font-medium text-neonprimary transition hover:text-emerald-300">Ver livro-razão</a>
-      </div>
-
-      <div class="mt-6 space-y-3">
-        {% for transacao in ultimas_transacoes %}
-          <article class="flex items-center gap-4 rounded-2xl border border-white/5 bg-white/5 px-4 py-4 transition hover:border-white/10 hover:bg-white/[0.04]">
-            <div class="flex h-11 w-11 items-center justify-center rounded-2xl {% if transacao.tipo == 'Receita' %}bg-emerald-500/10 text-emerald-300{% else %}bg-rose-500/10 text-rose-300{% endif %}">
-              {% if transacao.tipo == 'Receita' %}
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M4 12h16m-8-8l8 8-8 8" />
-                </svg>
-              {% else %}
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M20 12H4m8 8l-8-8 8-8" />
-                </svg>
-              {% endif %}
-            </div>
-
-            <div class="min-w-0 flex-1">
-              <div class="flex items-center gap-3">
-                <h3 class="truncate text-sm font-semibold text-white">{{ transacao.descricao }}</h3>
-                <span class="rounded-full border border-white/5 bg-white/5 px-2 py-1 text-[10px] font-medium uppercase tracking-[0.2em] text-slate-400">
-                  {{ transacao.get_tipo_display }}
-                </span>
-              </div>
-              <p class="mt-1 text-sm text-slate-500">{{ transacao.data_pagamento|date:"d/m"|default:transacao.data_vencimento|date:"d/m" }}</p>
-            </div>
-
-            <div class="text-right">
-              <p class="text-sm font-semibold {% if transacao.tipo == 'Receita' %}text-emerald-300{% else %}text-rose-300{% endif %}">
-                {% if transacao.tipo == 'Receita' %}+{% else %}-{% endif %}R$ {{ transacao.valor|floatformat:2 }}
-              </p>
-            </div>
-          </article>
-        {% empty %}
-          <div class="flex flex-col items-center justify-center rounded-2xl border border-white/5 bg-white/5 py-10 text-center">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-            </svg>
-            <p class="mt-3 text-sm text-slate-500">Ainda não existem movimentações registadas.</p>
-          </div>
-        {% endfor %}
-      </div>
-    </section>
-
-    <section class="glass-panel rounded-[28px] p-6 shadow-2xl shadow-black/10">
+    <section class="glass-panel rounded-[28px] p-6 shadow-2xl shadow-black/10 xl:row-span-2 xl:h-full">
       <p class="text-xs font-semibold uppercase tracking-[0.28em] text-slate-500">Leitura Rápida</p>
       <h2 class="mt-3 text-2xl font-semibold text-white">Resumo do Mês</h2>
       <div class="mt-6 space-y-4">
@@ -208,19 +131,65 @@
           {% endif %}
         </div>
         <div class="rounded-2xl bg-white/5 p-4">
-          <p class="text-sm text-slate-400">Margem do mês</p>
-          <p class="mt-1 text-lg font-semibold {% if margem_mes >= 0 %}text-neonprimary{% else %}text-neondanger{% endif %}">
-            {% if margem_mes >= 0 %}+{% endif %}R$ {{ margem_mes|floatformat:2 }}
-          </p>
+          <p class="text-sm text-slate-400">Receitas</p>
+          <p class="mt-1 text-lg font-semibold text-emerald-300">R$ {{ receitas_mes|floatformat:2 }}</p>
+          <p class="mt-1 text-xs text-emerald-300/55">Média 3M: R$ {{ media_receitas_3_meses|floatformat:2 }}</p>
         </div>
         <div class="rounded-2xl bg-white/5 p-4">
-          <p class="text-sm text-slate-400">Receitas × Despesas</p>
-          <p class="mt-1 text-sm font-medium text-slate-300">
-            <span class="text-emerald-400">↑ R$ {{ receitas_mes|floatformat:2 }}</span>
-            <span class="mx-2 text-slate-600">|</span>
-            <span class="text-rose-400">↓ R$ {{ despesas_mes|floatformat:2 }}</span>
+          <p class="text-sm text-slate-400">Despesas</p>
+          <p class="mt-1 text-lg font-semibold text-rose-300">R$ {{ despesas_mes|floatformat:2 }}</p>
+          <p class="mt-1 text-xs text-rose-300/55">Média 3M: R$ {{ media_despesas_3_meses|floatformat:2 }}</p>
+        </div>
+        <div class="rounded-2xl bg-white/5 p-4">
+          <p class="text-sm text-slate-400">Investimentos</p>
+          <p class="mt-1 text-lg font-semibold text-cyan-300">R$ {{ investimentos_mes|floatformat:2 }}</p>
+          <p class="mt-1 text-xs text-cyan-300/55">Média 3M: R$ {{ media_investimentos_3_meses|floatformat:2 }}</p>
+        </div>
+        <div class="rounded-2xl bg-white/5 p-4">
+          <p class="text-sm text-slate-400">Transferências - Entradas</p>
+          <p class="mt-1 text-lg font-semibold text-white">R$ {{ transferencias_entrada_mes|floatformat:2 }}</p>
+        </div>
+        <div class="rounded-2xl bg-white/5 p-4">
+          <p class="text-sm text-slate-400">Saldo do mês</p>
+          <p class="mt-1 text-lg font-semibold {% if saldo_mes >= 0 %}text-neonprimary{% else %}text-neondanger{% endif %}">
+            {% if saldo_mes >= 0 %}+{% endif %}R$ {{ saldo_mes|floatformat:2 }}
           </p>
         </div>
+      </div>
+    </section>
+
+    <section class="glass-panel rounded-[28px] p-6 shadow-2xl shadow-black/10 xl:col-span-2">
+      <div class="flex items-center justify-between gap-4">
+        <div>
+          <p class="text-xs font-semibold uppercase tracking-[0.28em] text-slate-500">Despesas e Investimentos</p>
+          <h2 class="mt-3 text-2xl font-semibold text-white">Planos de Conta do Mês</h2>
+        </div>
+      </div>
+
+      <div class="mt-6 max-h-[28rem] space-y-3 overflow-y-auto pr-1">
+        {% for plano in planos_resumo_mes %}
+          <article class="rounded-2xl border border-white/5 bg-white/5 px-4 py-4 transition hover:border-white/10 hover:bg-white/[0.04]">
+            <div class="flex items-start justify-between gap-4">
+              <div class="min-w-0 flex-1">
+                <h3 class="truncate text-sm font-semibold text-white">{{ plano.codigo }} {{ plano.nome }}</h3>
+                <p class="mt-1 text-[11px] uppercase tracking-[0.18em] text-slate-500">{{ plano.tipo_natureza }}</p>
+                <p class="mt-2 text-xs text-slate-500/80">Média 3M: R$ {{ plano.media_3_meses|floatformat:2 }}</p>
+              </div>
+              <div class="text-right">
+                <p class="text-sm font-semibold {% if plano.tipo_natureza == 'Investimento' %}text-cyan-300{% else %}text-rose-300{% endif %}">
+                  R$ {{ plano.total_mes|floatformat:2 }}
+                </p>
+              </div>
+            </div>
+          </article>
+        {% empty %}
+          <div class="flex flex-col items-center justify-center rounded-2xl border border-white/5 bg-white/5 py-10 text-center">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+            </svg>
+            <p class="mt-3 text-sm text-slate-500">Sem planos de despesas/investimentos com movimentos no mês atual.</p>
+          </div>
+        {% endfor %}
       </div>
     </section>
   </div>

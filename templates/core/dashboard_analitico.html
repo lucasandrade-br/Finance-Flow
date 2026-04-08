@@ -1,0 +1,349 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Dashboard Analitico - Finance Flow{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-7xl space-y-6">
+  <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+    <div>
+      <p class="text-sm font-medium uppercase tracking-[0.3em] text-slate-500">Analises</p>
+      <h1 class="mt-2 text-4xl font-bold tracking-tight text-white">Dashboard Analitico</h1>
+      <p class="mt-2 max-w-3xl text-sm text-slate-400">Leitura gerencial para entender ritmo de consumo, concentracao de gastos e qualidade operacional.</p>
+    </div>
+    <a href="{% url 'core:home' %}" class="inline-flex items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-slate-200 transition hover:border-neonprimary/40 hover:text-white">
+      Voltar para Home
+    </a>
+  </div>
+
+  <section class="glass-panel rounded-[28px] p-6 shadow-2xl shadow-black/10">
+    <form method="GET" class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
+      <div>
+        <label for="data_inicio" class="mb-1 block text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Data Inicio</label>
+        <input id="data_inicio" name="data_inicio" type="date" value="{{ data_inicio|date:'Y-m-d' }}" class="w-full rounded-xl border border-white/10 bg-darkbg px-3 py-2 text-sm text-white outline-none transition focus:border-neonprimary/40" />
+      </div>
+
+      <div>
+        <label for="data_fim" class="mb-1 block text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Data Fim</label>
+        <input id="data_fim" name="data_fim" type="date" value="{{ data_fim|date:'Y-m-d' }}" class="w-full rounded-xl border border-white/10 bg-darkbg px-3 py-2 text-sm text-white outline-none transition focus:border-neonprimary/40" />
+      </div>
+
+      <div>
+        <label for="conta_bancaria_id" class="mb-1 block text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Conta Bancaria</label>
+        <select id="conta_bancaria_id" name="conta_bancaria_id" class="w-full rounded-xl border border-white/10 bg-darkbg px-3 py-2 text-sm text-white outline-none transition focus:border-neonprimary/40">
+          <option value="">Todas</option>
+          {% for conta in contas_bancarias %}
+            <option value="{{ conta.id }}" {% if filtro_conta_bancaria_id == conta.id %}selected{% endif %}>{{ conta.nome }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div>
+        <label for="tipo" class="mb-1 block text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Tipo</label>
+        <select id="tipo" name="tipo" class="w-full rounded-xl border border-white/10 bg-darkbg px-3 py-2 text-sm text-white outline-none transition focus:border-neonprimary/40">
+          <option value="">Todos</option>
+          {% for tipo_item in tipos_disponiveis %}
+            <option value="{{ tipo_item }}" {% if filtro_tipo == tipo_item %}selected{% endif %}>{{ tipo_item }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div>
+        <label for="status" class="mb-1 block text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Status</label>
+        <select id="status" name="status" class="w-full rounded-xl border border-white/10 bg-darkbg px-3 py-2 text-sm text-white outline-none transition focus:border-neonprimary/40">
+          <option value="">Todos</option>
+          {% for status_item in status_disponiveis %}
+            <option value="{{ status_item }}" {% if filtro_status == status_item %}selected{% endif %}>{{ status_item }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="md:col-span-2 xl:col-span-5 flex items-center gap-3">
+        <button type="submit" class="inline-flex items-center justify-center rounded-xl bg-neonprimary px-4 py-2 text-sm font-semibold text-slate-950 transition hover:brightness-110">
+          Aplicar filtros
+        </button>
+        <a href="{% url 'core:dashboard_analitico' %}" class="inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-slate-200 transition hover:border-white/20 hover:text-white">
+          Limpar
+        </a>
+      </div>
+    </form>
+  </section>
+
+  <section class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
+    <article class="glass-panel rounded-2xl p-4">
+      <p class="text-xs uppercase tracking-[0.2em] text-slate-500">Receitas</p>
+      <p class="mt-2 text-2xl font-semibold text-emerald-300">R$ {{ receitas|floatformat:2 }}</p>
+    </article>
+    <article class="glass-panel rounded-2xl p-4">
+      <p class="text-xs uppercase tracking-[0.2em] text-slate-500">Despesas</p>
+      <p class="mt-2 text-2xl font-semibold text-rose-300">R$ {{ despesas|floatformat:2 }}</p>
+    </article>
+    <article class="glass-panel rounded-2xl p-4">
+      <p class="text-xs uppercase tracking-[0.2em] text-slate-500">Investimentos</p>
+      <p class="mt-2 text-2xl font-semibold text-cyan-300">R$ {{ investimentos|floatformat:2 }}</p>
+    </article>
+    <article class="glass-panel rounded-2xl p-4">
+      <p class="text-xs uppercase tracking-[0.2em] text-slate-500">Saldo Liquido</p>
+      <p class="mt-2 text-2xl font-semibold {% if saldo_liquido >= 0 %}text-neonprimary{% else %}text-neondanger{% endif %}">
+        {% if saldo_liquido >= 0 %}+{% endif %}R$ {{ saldo_liquido|floatformat:2 }}
+      </p>
+    </article>
+    <article class="glass-panel rounded-2xl p-4">
+      <p class="text-xs uppercase tracking-[0.2em] text-slate-500">Burn Rate Ciclo Ativo</p>
+      <p class="mt-2 text-2xl font-semibold {% if burn_rate_periodo > 80 %}text-neondanger{% else %}text-neonprimary{% endif %}">{{ burn_rate_periodo }}%</p>
+    </article>
+  </section>
+
+  <section class="grid grid-cols-1 gap-6 xl:grid-cols-2">
+    <article class="glass-panel rounded-[28px] p-6 shadow-2xl shadow-black/10">
+      <p class="text-xs font-semibold uppercase tracking-[0.28em] text-slate-500">Top Consumo</p>
+      <h2 class="mt-2 text-2xl font-semibold text-white">Despesas por Plano de Conta</h2>
+      <div class="mt-6 space-y-3">
+        {% for plano in top_despesas %}
+          <div class="rounded-2xl border border-white/5 bg-white/5 p-3">
+            <div class="flex items-center justify-between gap-2">
+              <p class="truncate text-sm font-semibold text-white">{{ plano.codigo }} - {{ plano.nome }}</p>
+              <p class="text-xs text-slate-400">{{ plano.percentual|floatformat:1 }}%</p>
+            </div>
+            <div class="mt-2 h-2 overflow-hidden rounded-full bg-slate-800/90">
+              <div class="h-full rounded-full bg-gradient-to-r from-rose-500 to-rose-300" style="width: {{ plano.percentual|floatformat:0 }}%"></div>
+            </div>
+            <p class="mt-2 text-xs text-slate-400">R$ {{ plano.total|floatformat:2 }}</p>
+          </div>
+        {% empty %}
+          <div class="rounded-2xl border border-white/5 bg-white/5 p-4 text-sm text-slate-400">Sem despesas no periodo filtrado.</div>
+        {% endfor %}
+      </div>
+    </article>
+
+    <article class="glass-panel rounded-[28px] p-6 shadow-2xl shadow-black/10">
+      <p class="text-xs font-semibold uppercase tracking-[0.28em] text-slate-500">Top Consumo</p>
+      <h2 class="mt-2 text-2xl font-semibold text-white">Investimentos por Plano de Conta</h2>
+      <div class="mt-6 space-y-3">
+        {% for plano in top_investimentos %}
+          <div class="rounded-2xl border border-white/5 bg-white/5 p-3">
+            <div class="flex items-center justify-between gap-2">
+              <p class="truncate text-sm font-semibold text-white">{{ plano.codigo }} - {{ plano.nome }}</p>
+              <p class="text-xs text-slate-400">{{ plano.percentual|floatformat:1 }}%</p>
+            </div>
+            <div class="mt-2 h-2 overflow-hidden rounded-full bg-slate-800/90">
+              <div class="h-full rounded-full bg-gradient-to-r from-cyan-500 to-cyan-300" style="width: {{ plano.percentual|floatformat:0 }}%"></div>
+            </div>
+            <p class="mt-2 text-xs text-slate-400">R$ {{ plano.total|floatformat:2 }}</p>
+          </div>
+        {% empty %}
+          <div class="rounded-2xl border border-white/5 bg-white/5 p-4 text-sm text-slate-400">Sem investimentos no periodo filtrado.</div>
+        {% endfor %}
+      </div>
+    </article>
+  </section>
+
+  <section class="grid grid-cols-1 gap-6">
+    <article class="glass-panel rounded-[28px] p-6 shadow-2xl shadow-black/10">
+      <div class="flex items-center justify-between gap-3">
+        <div>
+          <p class="text-xs font-semibold uppercase tracking-[0.28em] text-slate-500">Tendencia</p>
+          <h2 class="mt-2 text-2xl font-semibold text-white">Receitas x Despesas x Investimentos</h2>
+        </div>
+      </div>
+
+      <div class="mt-6 rounded-2xl border border-white/5 bg-white/5 p-4">
+        <canvas id="chart-tendencia" height="120"></canvas>
+      </div>
+    </article>
+  </section>
+
+  <section class="grid grid-cols-1 gap-6 xl:grid-cols-2">
+    <article class="glass-panel rounded-[28px] p-6 shadow-2xl shadow-black/10">
+      <p class="text-xs font-semibold uppercase tracking-[0.28em] text-slate-500">Despesas Recorrentes</p>
+      <h2 class="mt-2 text-2xl font-semibold text-white">Frequencia Variavel x Fixa</h2>
+      <div class="mt-6 rounded-2xl border border-white/5 bg-white/5 p-4">
+        <canvas id="chart-despesas-recorrentes" height="120"></canvas>
+      </div>
+    </article>
+
+    <article class="glass-panel rounded-[28px] p-6 shadow-2xl shadow-black/10">
+      <p class="text-xs font-semibold uppercase tracking-[0.28em] text-slate-500">Despesas Ocasionais</p>
+      <h2 class="mt-2 text-2xl font-semibold text-white">Frequencia Anual x Unica</h2>
+      <div class="mt-6 rounded-2xl border border-white/5 bg-white/5 p-4">
+        <canvas id="chart-despesas-ocasionais" height="120"></canvas>
+      </div>
+    </article>
+
+    <article class="glass-panel rounded-[28px] p-6 shadow-2xl shadow-black/10">
+      <p class="text-xs font-semibold uppercase tracking-[0.28em] text-slate-500">Lancamentos Futuros</p>
+      <h2 class="mt-2 text-2xl font-semibold text-white">Pendentes (somatorio mensal)</h2>
+      <div class="mt-6 rounded-2xl border border-white/5 bg-white/5 p-4">
+        <canvas id="chart-futuros-pendentes" height="120"></canvas>
+      </div>
+    </article>
+
+    <article class="glass-panel rounded-[28px] p-6 shadow-2xl shadow-black/10">
+      <p class="text-xs font-semibold uppercase tracking-[0.28em] text-slate-500">Investimentos</p>
+      <h2 class="mt-2 text-2xl font-semibold text-white">Por Plano de Conta</h2>
+      <div class="mt-6 rounded-2xl border border-white/5 bg-white/5 p-4">
+        <canvas id="chart-investimentos-plano" height="120"></canvas>
+      </div>
+    </article>
+  </section>
+
+  <section class="grid grid-cols-1 gap-6 xl:grid-cols-2">
+    <article class="glass-panel rounded-[28px] p-6 shadow-2xl shadow-black/10">
+      <p class="text-xs font-semibold uppercase tracking-[0.28em] text-slate-500">Qualidade Operacional</p>
+      <h2 class="mt-2 text-2xl font-semibold text-white">Execucao do Periodo</h2>
+      <div class="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <div class="rounded-2xl bg-white/5 p-4">
+          <p class="text-xs uppercase tracking-[0.18em] text-slate-500">Pendentes Vencidos</p>
+          <p class="mt-2 text-2xl font-semibold {% if pendentes_vencidos > 0 %}text-neondanger{% else %}text-neonprimary{% endif %}">{{ pendentes_vencidos }}</p>
+        </div>
+        <div class="rounded-2xl bg-white/5 p-4">
+          <p class="text-xs uppercase tracking-[0.18em] text-slate-500">Efetivacao no Prazo</p>
+          <p class="mt-2 text-2xl font-semibold {% if percentual_no_prazo < 70 %}text-neondanger{% else %}text-neonprimary{% endif %}">{{ percentual_no_prazo }}%</p>
+        </div>
+        <div class="rounded-2xl bg-white/5 p-4">
+          <p class="text-xs uppercase tracking-[0.18em] text-slate-500">Base Avaliada</p>
+          <p class="mt-2 text-2xl font-semibold text-slate-200">{{ total_efetivadas }}</p>
+        </div>
+      </div>
+    </article>
+
+    <article class="glass-panel rounded-[28px] p-6 shadow-2xl shadow-black/10">
+      <p class="text-xs font-semibold uppercase tracking-[0.28em] text-slate-500">Alertas</p>
+      <h2 class="mt-2 text-2xl font-semibold text-white">Pontos de Atencao</h2>
+      <div class="mt-6 space-y-3">
+        {% for alerta in alertas %}
+          <div class="rounded-2xl border p-4 {% if alerta.nivel == 'alto' %}border-neondanger/40 bg-neondanger/10{% else %}border-neonaccent/30 bg-neonaccent/10{% endif %}">
+            <p class="text-sm font-semibold text-white">{{ alerta.titulo }}</p>
+            <p class="mt-1 text-sm text-slate-300">{{ alerta.descricao }}</p>
+          </div>
+        {% empty %}
+          <div class="rounded-2xl border border-neonprimary/30 bg-neonprimary/10 p-4">
+            <p class="text-sm font-semibold text-white">Sem alertas criticos</p>
+            <p class="mt-1 text-sm text-slate-300">Os principais indicadores estao dentro de um intervalo saudavel no periodo selecionado.</p>
+          </div>
+        {% endfor %}
+      </div>
+    </article>
+  </section>
+
+  {{ chart_tendencia|json_script:"chart-tendencia-data" }}
+  {{ chart_despesas_recorrentes|json_script:"chart-despesas-recorrentes-data" }}
+  {{ chart_despesas_ocasionais|json_script:"chart-despesas-ocasionais-data" }}
+  {{ chart_futuros_pendentes|json_script:"chart-futuros-pendentes-data" }}
+  {{ chart_investimentos_plano|json_script:"chart-investimentos-plano-data" }}
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    const axisStyle = {
+      ticks: { color: '#94A3B8' },
+      grid: { color: 'rgba(148, 163, 184, 0.16)' },
+    };
+
+    function moneyTooltipLabel(context) {
+      const value = context.parsed.y ?? context.parsed.x ?? 0;
+      return `${context.dataset.label}: R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    }
+
+    function parseJsonScript(id) {
+      const el = document.getElementById(id);
+      return el ? JSON.parse(el.textContent) : null;
+    }
+
+    const tendencia = parseJsonScript('chart-tendencia-data') || { labels: [], receitas: [], despesas: [], investimentos: [] };
+    new Chart(document.getElementById('chart-tendencia'), {
+      type: 'line',
+      data: {
+        labels: tendencia.labels,
+        datasets: [
+          { label: 'Receitas', data: tendencia.receitas, borderColor: '#34D399', backgroundColor: 'rgba(52, 211, 153, 0.2)', tension: 0.35, fill: false },
+          { label: 'Despesas', data: tendencia.despesas, borderColor: '#FB7185', backgroundColor: 'rgba(251, 113, 133, 0.2)', tension: 0.35, fill: false },
+          { label: 'Investimentos', data: tendencia.investimentos, borderColor: '#22D3EE', backgroundColor: 'rgba(34, 211, 238, 0.2)', tension: 0.35, fill: false },
+        ],
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { labels: { color: '#CBD5E1' } }, tooltip: { callbacks: { label: moneyTooltipLabel } } },
+        scales: { x: axisStyle, y: axisStyle },
+      },
+    });
+
+    const recorrentes = parseJsonScript('chart-despesas-recorrentes-data') || { labels: [], variavel: [], fixa: [] };
+    new Chart(document.getElementById('chart-despesas-recorrentes'), {
+      type: 'line',
+      data: {
+        labels: recorrentes.labels,
+        datasets: [
+          { label: 'Variavel', data: recorrentes.variavel, borderColor: '#FB7185', backgroundColor: 'rgba(251, 113, 133, 0.2)', tension: 0.35, fill: false },
+          { label: 'Fixa', data: recorrentes.fixa, borderColor: '#A78BFA', backgroundColor: 'rgba(167, 139, 250, 0.2)', tension: 0.35, fill: false },
+        ],
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { labels: { color: '#CBD5E1' } }, tooltip: { callbacks: { label: moneyTooltipLabel } } },
+        scales: { x: axisStyle, y: axisStyle },
+      },
+    });
+
+    const ocasionais = parseJsonScript('chart-despesas-ocasionais-data') || { labels: [], anual: [], unica: [] };
+    new Chart(document.getElementById('chart-despesas-ocasionais'), {
+      type: 'bar',
+      data: {
+        labels: ocasionais.labels,
+        datasets: [
+          { label: 'Anual', data: ocasionais.anual, backgroundColor: 'rgba(251, 191, 36, 0.75)', borderRadius: 8 },
+          { label: 'Unica', data: ocasionais.unica, backgroundColor: 'rgba(244, 63, 94, 0.75)', borderRadius: 8 },
+        ],
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { labels: { color: '#CBD5E1' } }, tooltip: { callbacks: { label: moneyTooltipLabel } } },
+        scales: { x: axisStyle, y: axisStyle },
+      },
+    });
+
+    const futuros = parseJsonScript('chart-futuros-pendentes-data') || { labels: [], totais: [] };
+    new Chart(document.getElementById('chart-futuros-pendentes'), {
+      type: 'bar',
+      data: {
+        labels: futuros.labels,
+        datasets: [
+          {
+            label: 'Futuros pendentes',
+            data: futuros.totais,
+            backgroundColor: 'rgba(167, 139, 250, 0.75)',
+            borderRadius: 8,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { labels: { color: '#CBD5E1' } }, tooltip: { callbacks: { label: moneyTooltipLabel } } },
+        scales: { x: axisStyle, y: axisStyle },
+      },
+    });
+
+    const investimentosPlano = parseJsonScript('chart-investimentos-plano-data') || [];
+    new Chart(document.getElementById('chart-investimentos-plano'), {
+      type: 'bar',
+      data: {
+        labels: investimentosPlano.map((item) => item.label),
+        datasets: [
+          {
+            label: 'Investimentos',
+            data: investimentosPlano.map((item) => item.valor),
+            backgroundColor: 'rgba(34, 211, 238, 0.75)',
+            borderRadius: 8,
+          },
+        ],
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        plugins: { legend: { labels: { color: '#CBD5E1' } }, tooltip: { callbacks: { label: moneyTooltipLabel } } },
+        scales: { x: axisStyle, y: axisStyle },
+      },
+    });
+  </script>
+{% endblock %}

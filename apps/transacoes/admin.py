@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import LancamentoFuturo, Movimentacao, TransacaoRecorrente
+from .models import AliasImportacao, LancamentoFuturo, Movimentacao, TransacaoRecorrente
 
 
 @admin.register(TransacaoRecorrente)
@@ -26,3 +26,11 @@ class MovimentacaoAdmin(admin.ModelAdmin):
     date_hierarchy = 'data_vencimento'
     autocomplete_fields = ('conta_bancaria', 'plano_conta')
     raw_id_fields = ('ciclo', 'cofre', 'lancamento_pai', 'lancamento_par')
+
+
+@admin.register(AliasImportacao)
+class AliasImportacaoAdmin(admin.ModelAdmin):
+    list_display = ('entidade', 'valor_externo', 'tag', 'plano_conta', 'conta_bancaria', 'ativo')
+    list_filter = ('entidade', 'ativo')
+    search_fields = ('valor_externo',)
+    autocomplete_fields = ('tag', 'plano_conta', 'conta_bancaria')

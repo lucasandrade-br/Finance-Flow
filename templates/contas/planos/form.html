@@ -16,36 +16,107 @@
 
     <form method="POST" class="space-y-5">
       {% csrf_token %}
-      <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
-        <div>
-          <label for="codigo" class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Código</label>
-          <input id="codigo" name="codigo" type="text" value="{{ plano.codigo|default:codigo_sugerido|default:'' }}" required class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white outline-none transition focus:border-neonprimary/40" placeholder="Ex.: 1 ou 1.1" />
-          <p class="mt-1 text-xs text-slate-500">Sugestão automática ao escolher a conta pai.</p>
+
+      {% if acao == 'novo' %}
+        <div class="grid grid-cols-1 gap-5 rounded-2xl border border-white/10 bg-black/20 p-4 md:grid-cols-2">
+          <div>
+            <label for="tipo_natureza" class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Tipo para o lote</label>
+            <select id="tipo_natureza" name="tipo_natureza" required class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white outline-none transition focus:border-neonprimary/40">
+              {% for value, label in tipo_choices %}
+                <option value="{{ value }}" {% if tipo_natureza_selecionado == value %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div>
+            <label for="conta_pai_id_global" class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Conta Pai (Opcional)</label>
+            <select id="conta_pai_id_global" name="conta_pai_id" class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white outline-none transition focus:border-neonprimary/40">
+              <option value="">Nenhuma</option>
+              {% for item in planos_pai %}
+                <option value="{{ item.id }}" {% if conta_pai_lote_global|stringformat:'s' == item.id|stringformat:'s' %}selected{% endif %}>{{ item.codigo }} - {{ item.nome }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <p class="text-xs text-slate-500 md:col-span-2">O codigo e preenchido automaticamente em sequencia conforme a conta pai selecionada.</p>
         </div>
-        <div>
-          <label for="nome" class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Nome</label>
-          <input id="nome" name="nome" type="text" value="{{ plano.nome|default:'' }}" required class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white outline-none transition focus:border-neonprimary/40" />
+
+        <div class="overflow-x-auto rounded-2xl border border-white/10">
+          <table class="min-w-full divide-y divide-white/10" id="tabelaLotePlanos">
+            <thead class="bg-white/5">
+              <tr>
+                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Codigo</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Nome</th>
+                <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Acao</th>
+              </tr>
+            </thead>
+            <tbody id="corpoLotePlanos" class="divide-y divide-white/5 bg-black/10">
+              {% for row in lote_rows %}
+                <tr>
+                  <td class="px-4 py-3">
+                    <input
+                      name="codigo_lote[]"
+                      type="text"
+                      value="{{ row.codigo|default:'' }}"
+                      required
+                      class="w-full min-w-[150px] rounded-xl border border-white/10 bg-darkbg px-3 py-2 text-sm text-white outline-none transition focus:border-neonprimary/40"
+                      placeholder="Ex.: 1.1"
+                    />
+                  </td>
+                  <td class="px-4 py-3">
+                    <input
+                      name="nome_lote[]"
+                      type="text"
+                      value="{{ row.nome|default:'' }}"
+                      required
+                      class="w-full min-w-[260px] rounded-xl border border-white/10 bg-darkbg px-3 py-2 text-sm text-white outline-none transition focus:border-neonprimary/40"
+                      placeholder="Nome do plano"
+                    />
+                  </td>
+                  <td class="px-4 py-3 text-right">
+                    <button type="button" class="btnRemoverLinha inline-flex items-center rounded-xl border border-rose-400/30 bg-rose-500/10 px-3 py-2 text-xs font-semibold text-rose-200 transition hover:bg-rose-500/20">Remover</button>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
         </div>
-      </div>
-      <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
-        <div>
-          <label for="tipo_natureza" class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Tipo</label>
-          <select id="tipo_natureza" name="tipo_natureza" required class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white outline-none transition focus:border-neonprimary/40">
-            {% for value, label in tipo_choices %}
-              <option value="{{ value }}" {% if plano and plano.tipo_natureza == value %}selected{% endif %}>{{ label }}</option>
-            {% endfor %}
-          </select>
+
+        <div class="flex items-center justify-between gap-3">
+          <button type="button" id="btnAdicionarLinhaPlano" class="inline-flex items-center rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-slate-200 transition hover:bg-white/10">Adicionar linha</button>
+          <p class="text-xs text-slate-500">Dica: voce pode cadastrar um plano por linha.</p>
         </div>
-        <div>
-          <label for="conta_pai_id" class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Conta Pai (Opcional)</label>
-          <select id="conta_pai_id" name="conta_pai_id" class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white outline-none transition focus:border-neonprimary/40">
-            <option value="">Nenhuma</option>
-            {% for item in planos_pai %}
-              <option value="{{ item.id }}" {% if plano and plano.conta_pai_id == item.id %}selected{% endif %}>{{ item.codigo }} - {{ item.nome }}</option>
-            {% endfor %}
-          </select>
+      {% else %}
+        <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
+          <div>
+            <label for="codigo" class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Código</label>
+            <input id="codigo" name="codigo" type="text" value="{{ plano.codigo|default:codigo_sugerido|default:'' }}" required class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white outline-none transition focus:border-neonprimary/40" placeholder="Ex.: 1 ou 1.1" />
+            <p class="mt-1 text-xs text-slate-500">Sugestão automática ao escolher a conta pai.</p>
+          </div>
+          <div>
+            <label for="nome" class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Nome</label>
+            <input id="nome" name="nome" type="text" value="{{ plano.nome|default:'' }}" required class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white outline-none transition focus:border-neonprimary/40" />
+          </div>
         </div>
-      </div>
+        <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
+          <div>
+            <label for="tipo_natureza" class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Tipo</label>
+            <select id="tipo_natureza" name="tipo_natureza" required class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white outline-none transition focus:border-neonprimary/40">
+              {% for value, label in tipo_choices %}
+                <option value="{{ value }}" {% if plano and plano.tipo_natureza == value %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div>
+            <label for="conta_pai_id" class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Conta Pai (Opcional)</label>
+            <select id="conta_pai_id" name="conta_pai_id" class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white outline-none transition focus:border-neonprimary/40">
+              <option value="">Nenhuma</option>
+              {% for item in planos_pai %}
+                <option value="{{ item.id }}" {% if plano and plano.conta_pai_id == item.id %}selected{% endif %}>{{ item.codigo }} - {{ item.nome }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+      {% endif %}
+
       <div class="flex items-center justify-end gap-3 pt-4">
         <a href="{% url 'contas:lista_planos_conta' %}" class="inline-flex items-center rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-slate-300 transition hover:border-white/20 hover:bg-white/10">Cancelar</a>
         <button type="submit" class="inline-flex items-center rounded-2xl bg-neonprimary px-5 py-2 text-sm font-semibold text-slate-950 transition hover:brightness-110">Salvar</button>
@@ -56,48 +127,154 @@
 
 <script>
   (function () {
-    const selectPai = document.getElementById('conta_pai_id');
-    const inputCodigo = document.getElementById('codigo');
     const isEditar = '{{ acao }}' === 'editar';
-    let codigoTocado = false;
+    if (isEditar) {
+      const selectPai = document.getElementById('conta_pai_id');
+      const inputCodigo = document.getElementById('codigo');
+      let codigoTocado = false;
 
-    if (!selectPai || !inputCodigo) {
+      if (!selectPai || !inputCodigo) {
+        return;
+      }
+
+      inputCodigo.addEventListener('input', function () {
+        codigoTocado = true;
+      });
+
+      async function sugerirCodigo(forcar) {
+        if (!forcar && codigoTocado) {
+          return;
+        }
+
+        const contaPaiId = selectPai.value;
+        const params = new URLSearchParams();
+        if (contaPaiId) {
+          params.set('conta_pai_id', contaPaiId);
+        }
+
+        const resp = await fetch('{% url "contas:sugerir_codigo_plano" %}?' + params.toString());
+        if (!resp.ok) {
+          return;
+        }
+
+        const data = await resp.json();
+        if (data.codigo) {
+          inputCodigo.value = data.codigo;
+        }
+      }
+
+      selectPai.addEventListener('change', function () {
+        sugerirCodigo(true);
+      });
+
+      if (!inputCodigo.value) {
+        sugerirCodigo(true);
+      }
       return;
     }
 
-    inputCodigo.addEventListener('input', function () {
-      codigoTocado = true;
-    });
+    const corpo = document.getElementById('corpoLotePlanos');
+    const btnAdicionar = document.getElementById('btnAdicionarLinhaPlano');
+    const selectPaiGlobal = document.getElementById('conta_pai_id_global');
+    if (!corpo || !btnAdicionar || !selectPaiGlobal) {
+      return;
+    }
 
-    async function sugerirCodigo(forcar) {
-      if (!forcar && codigoTocado) {
-        return;
+    function proximoCodigo(codigoAtual) {
+      const partes = String(codigoAtual || '').split('.');
+      if (!partes.length) {
+        return '1';
       }
+      const ultimo = parseInt(partes[partes.length - 1], 10);
+      if (Number.isNaN(ultimo)) {
+        return codigoAtual;
+      }
+      partes[partes.length - 1] = String(ultimo + 1);
+      return partes.join('.');
+    }
 
-      const contaPaiId = selectPai.value;
+    async function buscarCodigoBase() {
       const params = new URLSearchParams();
-      if (contaPaiId) {
-        params.set('conta_pai_id', contaPaiId);
+      if (selectPaiGlobal.value) {
+        params.set('conta_pai_id', selectPaiGlobal.value);
       }
-
       const resp = await fetch('{% url "contas:sugerir_codigo_plano" %}?' + params.toString());
       if (!resp.ok) {
-        return;
+        return '';
       }
-
       const data = await resp.json();
-      if (data.codigo) {
-        inputCodigo.value = data.codigo;
-      }
+      return data.codigo || '';
     }
 
-    selectPai.addEventListener('change', function () {
-      sugerirCodigo(true);
+    function preencherCodigosSequenciais(codigoBase, forcar) {
+      let ultimoCodigo = '';
+      const linhas = Array.from(corpo.querySelectorAll('tr'));
+      linhas.forEach(function (linha, indice) {
+        const inputCodigo = linha.querySelector('input[name="codigo_lote[]"]');
+        if (!inputCodigo) {
+          return;
+        }
+        const atual = inputCodigo.value.trim();
+        if (forcar || !atual) {
+          if (!ultimoCodigo) {
+            inputCodigo.value = codigoBase || atual || '1';
+            ultimoCodigo = inputCodigo.value.trim();
+          } else {
+            ultimoCodigo = proximoCodigo(ultimoCodigo);
+            inputCodigo.value = ultimoCodigo;
+          }
+        } else {
+          ultimoCodigo = atual;
+        }
+        if (indice === 0 && !ultimoCodigo) {
+          ultimoCodigo = codigoBase || '1';
+          inputCodigo.value = ultimoCodigo;
+        }
+      });
+    }
+
+    function novaLinhaPlano() {
+      const tr = document.createElement('tr');
+      tr.innerHTML = [
+        '<td class="px-4 py-3">',
+        '  <input name="codigo_lote[]" type="text" required class="w-full min-w-[150px] rounded-xl border border-white/10 bg-darkbg px-3 py-2 text-sm text-white outline-none transition focus:border-neonprimary/40" placeholder="Ex.: 1.1" />',
+        '</td>',
+        '<td class="px-4 py-3">',
+        '  <input name="nome_lote[]" type="text" required class="w-full min-w-[260px] rounded-xl border border-white/10 bg-darkbg px-3 py-2 text-sm text-white outline-none transition focus:border-neonprimary/40" placeholder="Nome do plano" />',
+        '</td>',
+        '<td class="px-4 py-3 text-right">',
+        '  <button type="button" class="btnRemoverLinha inline-flex items-center rounded-xl border border-rose-400/30 bg-rose-500/10 px-3 py-2 text-xs font-semibold text-rose-200 transition hover:bg-rose-500/20">Remover</button>',
+        '</td>',
+      ].join('');
+      corpo.appendChild(tr);
+    }
+
+    btnAdicionar.addEventListener('click', async function () {
+      novaLinhaPlano();
+      const codigoBase = await buscarCodigoBase();
+      preencherCodigosSequenciais(codigoBase, false);
     });
 
-    if (!isEditar && !inputCodigo.value) {
-      sugerirCodigo(true);
-    }
+    corpo.addEventListener('click', function (event) {
+      const botao = event.target.closest('.btnRemoverLinha');
+      if (!botao) {
+        return;
+      }
+      if (corpo.querySelectorAll('tr').length <= 1) {
+        return;
+      }
+      botao.closest('tr').remove();
+    });
+
+    selectPaiGlobal.addEventListener('change', async function () {
+      const codigoBase = await buscarCodigoBase();
+      preencherCodigosSequenciais(codigoBase, true);
+    });
+
+    (async function inicializarCodigos() {
+      const codigoBase = await buscarCodigoBase();
+      preencherCodigosSequenciais(codigoBase, false);
+    })();
   })();
 </script>
 {% endblock %}

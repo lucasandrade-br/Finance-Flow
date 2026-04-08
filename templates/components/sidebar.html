@@ -27,7 +27,7 @@
           <path stroke-linecap="round" stroke-linejoin="round"
                 d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0h6"/>
         </svg>
-        Dashboard
+        Home
       </a>
 
       <a href="{% url 'orcamento:cockpit_ciclo' %}" class="sidebar-link group flex items-center gap-3 px-3 py-2.5 rounded-lg
@@ -77,6 +77,8 @@
         </svg>
         Lancamentos Futuros
       </a>
+
+      
     </section>
 
     <!-- Área: Gerencial -->
@@ -121,7 +123,7 @@
 
     
 
-    <!-- Área: Planejamento e Investimentos -->
+    <!-- Área: Planejamento -->
     <section class="space-y-1">
       <p class="px-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">Planejamento</p>
 
@@ -135,6 +137,45 @@
         </svg>
         Metas
       </a>
+      
+
+      <a href="{% url 'orcamento:simulacao_capital' %}" class="sidebar-link group flex items-center gap-3 px-3 py-2.5 rounded-lg
+                         text-sm font-medium text-white hover:text-slate-100
+                         hover:bg-white/5 transition-colors duration-150">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 shrink-0" fill="none"
+             viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75">
+          <path stroke-linecap="round" stroke-linejoin="round"
+                d="M3 3v18h18M7 15l3-3 3 2 4-5"/>
+        </svg>
+        Simulacao Anual
+      </a>
+      <a href="{% url 'orcamento:lista_movimentacoes_orcamento' %}" class="sidebar-link group flex items-center gap-3 px-3 py-2.5 rounded-lg
+                         text-sm font-medium text-white hover:text-slate-100
+                         hover:bg-white/5 transition-colors duration-150">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 shrink-0" fill="none"
+             viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75">
+          <path stroke-linecap="round" stroke-linejoin="round"
+                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+        </svg>
+        Orçamento
+      </a>
+      <a href="{% url 'orcamento:matriz_planejamento' %}" class="sidebar-link group flex items-center gap-3 px-3 py-2.5 rounded-lg
+                         text-sm font-medium text-white hover:text-slate-100
+                         hover:bg-white/5 transition-colors duration-150">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 shrink-0" fill="none"
+             viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75">
+          <path stroke-linecap="round" stroke-linejoin="round"
+                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+        </svg>
+        Planejamento Anual
+      </a>
+    </section>
+
+
+  <!-- Área: Investimentos -->
+    <section class="space-y-1">
+      <p class="px-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">Investimentos</p>
+
 
       <a href="#" class="sidebar-link group flex items-center gap-3 px-3 py-2.5 rounded-lg
                          text-sm font-medium text-white hover:text-slate-100
@@ -147,18 +188,6 @@
         Investimentos
       </a>
     
-
-    
-      <a href="{% url 'orcamento:matriz_planejamento' %}" class="sidebar-link group flex items-center gap-3 px-3 py-2.5 rounded-lg
-                         text-sm font-medium text-white hover:text-slate-100
-                         hover:bg-white/5 transition-colors duration-150">
-        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 shrink-0" fill="none"
-             viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75">
-          <path stroke-linecap="round" stroke-linejoin="round"
-                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-        </svg>
-        Planejamento Anual
-      </a>
     </section>
   </nav>
 

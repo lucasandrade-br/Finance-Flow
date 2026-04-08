@@ -65,3 +65,50 @@ class Cofre(ModeloBase):
 
     def __str__(self):
         return f'{self.nome} (R$ {self.saldo_atual} / R$ {self.valor_meta})'
+
+
+class MovimentacaoOrcamento(ModeloBase):
+    class Tipo(models.TextChoices):
+        RECEITA = 'Receita', 'Receita'
+        DESPESA = 'Despesa', 'Despesa'
+        INVESTIMENTO = 'Investimento', 'Investimento'
+        TRANSFERENCIA = 'Transferencia', 'Transferência'
+
+    class Frequencia(models.TextChoices):
+        MENSAL = 'Mensal', 'Mensal'
+        ANUAL = 'Anual', 'Anual'
+
+    tipo = models.CharField(max_length=15, choices=Tipo.choices)
+    valor = models.DecimalField(max_digits=12, decimal_places=2)
+    tags = models.ManyToManyField('contas.Tag', blank=True, related_name='movimentacoes_orcamento')
+    plano_conta = models.ForeignKey(
+        'contas.PlanoConta',
+        on_delete=models.PROTECT,
+        related_name='movimentacoes_orcamento',
+    )
+    descricao = models.CharField(max_length=255, blank=True)
+    frequencia = models.CharField(max_length=10, choices=Frequencia.choices, default=Frequencia.MENSAL)
+    conta_bancaria = models.ForeignKey(
+        'contas.ContaBancaria',
+        on_delete=models.PROTECT,
+        related_name='movimentacoes_orcamento',
+    )
+    dia_referencia = models.PositiveSmallIntegerField(
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(1), MaxValueValidator(31)],
+    )
+    mes_referencia = models.PositiveSmallIntegerField(
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(1), MaxValueValidator(12)],
+    )
+    status_ativa = models.BooleanField(default=True)
+
+    class Meta:
+        verbose_name = 'Movimentação de Orçamento'
+        verbose_name_plural = 'Movimentações de Orçamento'
+        ordering = ['tipo', 'plano_conta__codigo', 'descricao']
+
+    def __str__(self):
+        return f'[{self.get_tipo_display()}] {self.plano_conta} -> R$ {self.valor}'

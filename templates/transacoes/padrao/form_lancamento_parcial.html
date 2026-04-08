@@ -23,6 +23,7 @@
 
 <!-- Incluir Modal Reutilizável -->
 {% include "components/modal_nova_tag.html" %}
+{{ selected_tags_data|json_script:"selected-tags-transacao" }}
 
 <!-- Select2 JS e CSS -->
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
@@ -226,6 +227,25 @@
       sincronizarPlanoContaComTag(event.params.data);
     });
 
+    const selectedTagsElement = document.getElementById('selected-tags-transacao');
+    let tagsSelecionadas = [];
+    if (selectedTagsElement) {
+      try {
+        tagsSelecionadas = JSON.parse(selectedTagsElement.textContent || '[]');
+      } catch (error) {
+        tagsSelecionadas = [];
+      }
+    }
+
+    if (Array.isArray(tagsSelecionadas) && tagsSelecionadas.length) {
+      tagsSelecionadas.forEach(function (item) {
+        const opcao = new Option(item.text, item.id, true, true);
+        $('#tagsSelect2').append(opcao);
+      });
+      $('#tagsSelect2').trigger('change');
+      sincronizarPlanoContaComTag(tagsSelecionadas[tagsSelecionadas.length - 1]);
+    }
+
     $tipo.on('change', function () {
       alternarContaDestino();
       filtrarPlanoContaPorTipo();
@@ -236,6 +256,13 @@
 
     const inputVisual = document.getElementById('valor_visual');
     const inputReal = document.getElementById('valor_real');
+    const valorInicial = inputReal.value;
+    if (valorInicial) {
+      const numero = Number(valorInicial);
+      if (!Number.isNaN(numero)) {
+        inputVisual.value = numero.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      }
+    }
     inputVisual.addEventListener('input', function(e) {
       let valorLimpo = e.target.value.replace(/\D/g, '');
       if (valorLimpo === '') { inputReal.value = ''; e.target.value = ''; return; }

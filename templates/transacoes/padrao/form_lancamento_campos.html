@@ -12,7 +12,7 @@
   <div>
     <label for="valor_visual" class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Valor</label>
     <input id="valor_visual" type="text" required class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white outline-none transition focus:border-neonprimary/40" placeholder="0,00" />
-    <input id="valor_real" name="valor" type="hidden" />
+    <input id="valor_real" name="valor" type="hidden" value="{{ form_data.valor|default:'' }}" />
   </div>
 </div>
 <div>
@@ -34,7 +34,7 @@
     <label for="plano_conta_id" class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Plano de Conta</label>
     <select id="plano_conta_id" name="plano_conta_id" required class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white outline-none transition focus:border-neonprimary/40">
       {% for plano in plano_contas %}
-        <option value="{{ plano.id }}" data-tipo="{{ plano.tipo_natureza }}">{{ plano.codigo }} - {{ plano.nome }}</option>
+        <option value="{{ plano.id }}" data-tipo="{{ plano.tipo_natureza }}" {% if form_data.plano_conta_id|stringformat:'s' == plano.id|stringformat:'s' %}selected{% endif %}>{{ plano.codigo }} - {{ plano.nome }}</option>
       {% empty %}
         <option value="">Nenhum plano de conta cadastrado</option>
       {% endfor %}
@@ -44,7 +44,7 @@
     <label for="conta_bancaria_id" class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Conta Bancária</label>
     <select id="conta_bancaria_id" name="conta_bancaria_id" required class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white outline-none transition focus:border-neonprimary/40">
       {% for conta in contas %}
-        <option value="{{ conta.id }}">{{ conta.nome }} ({{ conta.get_tipo_display }})</option>
+        <option value="{{ conta.id }}" {% if form_data.conta_bancaria_id|stringformat:'s' == conta.id|stringformat:'s' %}selected{% endif %}>{{ conta.nome }} ({{ conta.get_tipo_display }})</option>
       {% empty %}
         <option value="">Nenhuma conta cadastrada</option>
       {% endfor %}
@@ -55,21 +55,22 @@
   <div>
     <label for="formato_pagamento" class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Forma de Pagamento</label>
     <select id="formato_pagamento" name="formato_pagamento" required class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white outline-none transition focus:border-neonprimary/40">
-      <option value="PIX" selected>PIX</option>
-      <option value="Cartao">Cartão</option>
-      <option value="Boleto">Boleto</option>
-      <option value="Dinheiro">Dinheiro</option>
-      <option value="Debito">Débito</option>
-      <option value="TED">TED</option>
-      <option value="DOC">DOC</option>
+      <option value="PIX" {% if form_data.formato_pagamento == 'PIX' or not form_data.formato_pagamento %}selected{% endif %}>PIX</option>
+      <option value="Cartao" {% if form_data.formato_pagamento == 'Cartao' %}selected{% endif %}>Cartão</option>
+      <option value="Boleto" {% if form_data.formato_pagamento == 'Boleto' %}selected{% endif %}>Boleto</option>
+      <option value="Dinheiro" {% if form_data.formato_pagamento == 'Dinheiro' %}selected{% endif %}>Dinheiro</option>
+      <option value="Debito" {% if form_data.formato_pagamento == 'Debito' %}selected{% endif %}>Débito</option>
+      <option value="TED" {% if form_data.formato_pagamento == 'TED' %}selected{% endif %}>TED</option>
+      <option value="DOC" {% if form_data.formato_pagamento == 'DOC' %}selected{% endif %}>DOC</option>
     </select>
   </div>
   <div>
     <label for="frequencia" class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Frequência</label>
     <select id="frequencia" name="frequencia" required class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white outline-none transition focus:border-neonprimary/40">
-      <option value="Variavel" selected>Variável</option>
-      <option value="Fixa">Fixa</option>
-      <option value="Anual">Anual</option>
+      <option value="Variavel" {% if form_data.frequencia == 'Variavel' or not form_data.frequencia %}selected{% endif %}>Variável</option>
+      <option value="Fixa" {% if form_data.frequencia == 'Fixa' %}selected{% endif %}>Fixa</option>
+      <option value="Anual" {% if form_data.frequencia == 'Anual' %}selected{% endif %}>Anual</option>
+      <option value="Unica" {% if form_data.frequencia == 'Unica' %}selected{% endif %}>Única/Ocasional</option>
     </select>
   </div>
 </div>
@@ -88,13 +89,13 @@
     <select id="conta_destino_id" name="conta_destino_id" class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white outline-none transition focus:border-neonprimary/40">
       <option value="">Selecione a conta destino...</option>
       {% for conta in contas %}
-        <option value="{{ conta.id }}">{{ conta.nome }} ({{ conta.get_tipo_display }})</option>
+        <option value="{{ conta.id }}" {% if form_data.conta_destino_id|stringformat:'s' == conta.id|stringformat:'s' %}selected{% endif %}>{{ conta.nome }} ({{ conta.get_tipo_display }})</option>
       {% endfor %}
     </select>
   </div>
   <div>
     <label for="data_pagamento" class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Data de Pagamento</label>
-    <input id="data_pagamento" name="data_pagamento" type="date" value="{{ hoje|date:'Y-m-d' }}" required class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white outline-none transition focus:border-neonprimary/40" />
+    <input id="data_pagamento" name="data_pagamento" type="date" value="{% if form_data.data_pagamento %}{{ form_data.data_pagamento }}{% else %}{{ hoje|date:'Y-m-d' }}{% endif %}" required class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white outline-none transition focus:border-neonprimary/40" />
   </div>
 </div>
 
@@ -105,7 +106,7 @@
 </div>
 <div>
   <label for="descricao" class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Descrição</label>
-  <input id="descricao" name="descricao" type="text" class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white outline-none transition focus:border-neonprimary/40" placeholder="Ex.: Supermercado, Aluguel, Salário" />
+  <input id="descricao" name="descricao" type="text" value="{{ form_data.descricao|default:'' }}" class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white outline-none transition focus:border-neonprimary/40" placeholder="Ex.: Supermercado, Aluguel, Salário" />
 </div>
 <div class="flex items-center justify-end gap-3 pt-4">
   {% if cancel_url %}

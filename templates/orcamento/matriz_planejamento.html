@@ -58,22 +58,58 @@
           {% for linha in matriz %}
             <tr class="transition hover:bg-white/5">
               <td class="sticky left-0 z-10 border-r border-white/10 bg-[#101114] px-4 py-3 align-top">
-                <p class="text-sm font-semibold text-white">{{ linha.plano_conta.nome }}</p>
-                <p class="mt-1 text-[10px] uppercase tracking-[0.14em] text-slate-500">{{ linha.plano_conta.tipo_natureza }} • {{ linha.plano_conta.codigo }}</p>
+                <div class="flex items-start justify-between gap-2">
+                  <div style="padding-left: {{ linha.nivel }}rem;">
+                    <div class="flex items-center gap-2">
+                      <p class="text-sm font-semibold text-white">{{ linha.plano_conta.nome }}</p>
+                      {% if linha.is_parent %}
+                        <span class="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[9px] font-medium uppercase tracking-[0.16em] text-slate-400">Somatorio</span>
+                      {% endif %}
+                    </div>
+                    <p class="mt-1 text-[10px] uppercase tracking-[0.14em] text-slate-500">{{ linha.plano_conta.tipo_natureza }} • {{ linha.plano_conta.codigo }}</p>
+                  </div>
+
+                  {% if not linha.is_parent %}
+                    <div class="shrink-0 pt-0.5">
+                      <button
+                        type="button"
+                        class="btnPropagarLinha inline-flex h-6 w-6 items-center justify-center rounded-md border border-white/10 bg-white/5 text-slate-300 transition hover:bg-white/10"
+                        data-plano-id="{{ linha.plano_conta.id }}"
+                        title="Replicar valor de JAN para todos os meses"
+                        aria-label="Replicar valor de janeiro"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v6h6M20 20v-6h-6M20 8a8 8 0 00-14.9-4M4 16a8 8 0 0014.9 4" />
+                        </svg>
+                      </button>
+                    </div>
+                  {% endif %}
+                </div>
               </td>
 
               {% for celula in linha.meses %}
                 <td class="px-2 py-2 align-top">
                   <div class="rounded-xl border border-white/10 bg-darkbg px-2 py-2">
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      name="valor_{{ linha.plano_conta.id }}_{{ celula.mes }}"
-                      {% if celula.tem_valor_planejado %}value="{{ celula.valor_planejado|unlocalize }}"{% endif %}
-                      class="w-full bg-darkbg text-center text-sm font-medium text-white outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                      placeholder="0,00"
-                    />
+                    {% if celula.input_livre %}
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        name="valor_{{ linha.plano_conta.id }}_{{ celula.mes }}"
+                        {% if celula.tem_valor_planejado %}value="{{ celula.valor_planejado|unlocalize }}"{% endif %}
+                        class="w-full bg-darkbg text-center text-sm font-medium text-white outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                        placeholder="0,00"
+                      />
+                    {% else %}
+                      <input
+                        type="number"
+                        step="0.01"
+                        value="{{ celula.valor_planejado|unlocalize }}"
+                        class="w-full cursor-not-allowed bg-darkbg text-center text-sm font-semibold text-slate-300 outline-none"
+                        readonly
+                        disabled
+                      />
+                    {% endif %}
                     <p class="mt-1 text-center text-[10px] text-slate-500">{{ ano_anterior }}: R$ {{ celula.valor_real_ano_passado_fmt }}</p>
                   </div>
                 </td>
@@ -93,4 +129,42 @@
     </div>
   </form>
 </div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  (function () {
+    const botoes = Array.from(document.querySelectorAll('.btnPropagarLinha'));
+    if (!botoes.length) {
+      return;
+    }
+
+    botoes.forEach(function (botao) {
+      botao.addEventListener('click', function () {
+        const planoId = botao.getAttribute('data-plano-id');
+        if (!planoId) {
+          return;
+        }
+
+        const inputJaneiro = document.querySelector('input[name="valor_' + planoId + '_1"]');
+        if (!inputJaneiro) {
+          return;
+        }
+
+        const valorJaneiro = inputJaneiro.value;
+        if (valorJaneiro === '') {
+          return;
+        }
+
+        for (let mes = 1; mes <= 12; mes += 1) {
+          const inputMes = document.querySelector('input[name="valor_' + planoId + '_' + mes + '"]');
+          if (!inputMes || inputMes.disabled || inputMes.readOnly) {
+            continue;
+          }
+          inputMes.value = valorJaneiro;
+        }
+      });
+    });
+  })();
+</script>
 {% endblock %}

@@ -2,6 +2,7 @@ import json
 import re
 from decimal import Decimal, InvalidOperation
 
+from django.db import transaction
 from django.db.models import Case, DecimalField, F, ProtectedError, Q, Sum, Value, When
 from django.db.models.functions import Coalesce
 from django.http import JsonResponse
@@ -112,26 +113,72 @@ def novo_plano_conta(request):
     planos_pai = PlanoConta.objects.order_by('codigo', 'nome')
     erro_formulario = None
     codigo_sugerido = _sugerir_codigo_plano()
+    lote_rows = [{'codigo': codigo_sugerido, 'nome': '', 'conta_pai_id': ''}]
+    tipo_natureza_selecionado = PlanoConta.TipoNatureza.DESPESA
+    conta_pai_lote_global = ''
 
     if request.method == 'POST':
-        codigo = (request.POST.get('codigo') or '').strip()
-        nome = (request.POST.get('nome') or '').strip()
         tipo_natureza = request.POST.get('tipo_natureza')
+        tipo_natureza_selecionado = tipo_natureza
         conta_pai_id = _to_int_or_none(request.POST.get('conta_pai_id'))
+        conta_pai_lote_global = request.POST.get('conta_pai_id') or ''
+        codigos = request.POST.getlist('codigo_lote[]')
+        nomes = request.POST.getlist('nome_lote[]')
         codigo_sugerido = _sugerir_codigo_plano(conta_pai_id)
 
-        erro_codigo = _validar_codigo_hierarquico(codigo, conta_pai_id)
-        if erro_codigo:
-            erro_formulario = erro_codigo
-        elif not nome:
-            erro_formulario = 'Nome do plano de conta é obrigatório.'
-        else:
-            PlanoConta.objects.create(
-                codigo=codigo,
-                nome=nome,
-                tipo_natureza=tipo_natureza,
-                conta_pai_id=conta_pai_id,
+        total_linhas = max(len(codigos), len(nomes), 0)
+        linhas_processadas = []
+        codigos_lote = []
+
+        for idx in range(total_linhas):
+            codigo = (codigos[idx] if idx < len(codigos) else '').strip()
+            nome = (nomes[idx] if idx < len(nomes) else '').strip()
+
+            if not codigo and not nome:
+                continue
+
+            linhas_processadas.append(
+                {
+                    'codigo': codigo,
+                    'nome': nome,
+                }
             )
+
+            if not codigo:
+                erro_formulario = f'Linha {len(linhas_processadas)}: código do plano é obrigatório.'
+                break
+            if not nome:
+                erro_formulario = f'Linha {len(linhas_processadas)}: nome do plano é obrigatório.'
+                break
+
+            erro_codigo = _validar_codigo_hierarquico(codigo, conta_pai_id)
+            if erro_codigo:
+                erro_formulario = f'Linha {len(linhas_processadas)}: {erro_codigo}'
+                break
+
+            if codigo in codigos_lote:
+                erro_formulario = f'Linha {len(linhas_processadas)}: código {codigo} repetido no lote.'
+                break
+            codigos_lote.append(codigo)
+
+        tipo_choices_values = {value for value, _ in PlanoConta.TipoNatureza.choices}
+        if not erro_formulario and tipo_natureza not in tipo_choices_values:
+            erro_formulario = 'Selecione um tipo válido para o lote.'
+
+        if not erro_formulario and not linhas_processadas:
+            erro_formulario = 'Adicione pelo menos uma linha de plano para cadastrar.'
+
+        if erro_formulario:
+            lote_rows = linhas_processadas if linhas_processadas else lote_rows
+        else:
+            with transaction.atomic():
+                for linha in linhas_processadas:
+                    PlanoConta.objects.create(
+                        codigo=linha['codigo'],
+                        nome=linha['nome'],
+                        tipo_natureza=tipo_natureza,
+                        conta_pai_id=conta_pai_id,
+                    )
             return redirect('contas:lista_planos_conta')
 
     context = {
@@ -141,6 +188,9 @@ def novo_plano_conta(request):
         'tipo_choices': PlanoConta.TipoNatureza.choices,
         'erro_formulario': erro_formulario,
         'codigo_sugerido': codigo_sugerido,
+        'lote_rows': lote_rows,
+        'tipo_natureza_selecionado': tipo_natureza_selecionado,
+        'conta_pai_lote_global': conta_pai_lote_global,
     }
     return render(request, 'contas/planos/form.html', context)
 
@@ -291,7 +341,7 @@ def lista_contas_bancarias(request):
     query = (request.GET.get('q') or '').strip()
     tipo = (request.GET.get('tipo') or '').strip()
 
-    contas = ContaBancaria.objects.order_by('nome')
+    contas = ContaBancaria.objects.all()
     if query:
         contas = contas.filter(nome__icontains=query)
     if tipo:
@@ -341,6 +391,9 @@ def lista_contas_bancarias(request):
     for conta in contas:
         saldo_mov = mapa_saldo_mov.get(conta.id, Decimal('0.00'))
         conta.saldo_atual = (conta.saldo_inicial + saldo_mov).quantize(Decimal('0.01'))
+
+    # Prioriza visualização por maior saldo atual, com nome como desempate.
+    contas.sort(key=lambda conta: (-conta.saldo_atual, conta.nome.lower()))
 
     context = {
         'contas': contas,

@@ -1,0 +1,332 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Importar Movimentações — Finance Flow{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-7xl">
+  <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+    <div>
+      <p class="text-sm font-medium uppercase tracking-[0.3em] text-gray-500">Importação</p>
+      <h1 class="mt-2 text-4xl font-bold tracking-tight text-white">Importar Movimentações</h1>
+      <p class="mt-2 max-w-2xl text-sm text-slate-400">Faça upload do CSV/XLSX, revise o preview e confirme apenas quando tudo estiver reconciliado.</p>
+    </div>
+    <div class="inline-flex items-center gap-2">
+      <a href="{% url 'transacoes:baixar_modelo_importacao_xlsx' %}" class="inline-flex items-center rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-slate-300 transition hover:bg-white/10">Baixar Modelo XLSX</a>
+      <a href="{% url 'transacoes:lista_aliases_importacao' %}" class="inline-flex items-center rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-slate-300 transition hover:bg-white/10">Gerenciar Aliases</a>
+    </div>
+  </div>
+
+  <section class="glass-panel mt-6 rounded-[28px] p-6 shadow-2xl shadow-black/10">
+    <form method="post" enctype="multipart/form-data" class="space-y-5">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="preview" />
+
+      {% if erro_formulario %}
+        <div class="rounded-2xl border border-red-400/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">{{ erro_formulario }}</div>
+      {% endif %}
+
+      <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
+        <div>
+          <label class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Arquivo CSV ou XLSX</label>
+          <input type="file" name="arquivo" accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white" required />
+        </div>
+        <div>
+          <label class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Tipo padrão (fallback)</label>
+          <select name="default_tipo" class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white">
+            {% for value, label in tipos_transacao %}
+              <option value="{{ value }}" {% if defaults.tipo == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Status padrão</label>
+          <select name="default_status" class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white">
+            {% for value, label in status_choices %}
+              <option value="{{ value }}" {% if defaults.status == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Forma padrão</label>
+          <select name="default_formato_pagamento" class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white">
+            {% for value, label in formato_choices %}
+              <option value="{{ value }}" {% if defaults.formato_pagamento == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Frequência padrão</label>
+          <select name="default_frequencia" class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white">
+            {% for value, label in frequencia_choices %}
+              <option value="{{ value }}" {% if defaults.frequencia == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      {% if headers %}
+        <div class="rounded-2xl border border-white/10 bg-white/5 p-4">
+          <p class="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Mapeamento de colunas</p>
+          <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <div>
+              <label class="mb-1 block text-xs text-slate-400">Descrição</label>
+              <select name="col_descricao" class="w-full rounded-xl border border-white/10 bg-darkbg px-3 py-2 text-sm text-white">
+                <option value="">Nenhuma</option>
+                {% for h in headers %}
+                  <option value="{{ h }}" {% if mapeamento.descricao == h %}selected{% endif %}>{{ h }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div>
+              <label class="mb-1 block text-xs text-slate-400">Tipo</label>
+              <select name="col_tipo" class="w-full rounded-xl border border-white/10 bg-darkbg px-3 py-2 text-sm text-white">
+                <option value="">Nenhuma</option>
+                {% for h in headers %}
+                  <option value="{{ h }}" {% if mapeamento.tipo == h %}selected{% endif %}>{{ h }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div>
+              <label class="mb-1 block text-xs text-slate-400">Valor</label>
+              <select name="col_valor" class="w-full rounded-xl border border-white/10 bg-darkbg px-3 py-2 text-sm text-white">
+                <option value="">Nenhuma</option>
+                {% for h in headers %}
+                  <option value="{{ h }}" {% if mapeamento.valor == h %}selected{% endif %}>{{ h }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div>
+              <label class="mb-1 block text-xs text-slate-400">Data de vencimento</label>
+              <select name="col_data_vencimento" class="w-full rounded-xl border border-white/10 bg-darkbg px-3 py-2 text-sm text-white">
+                <option value="">Nenhuma</option>
+                {% for h in headers %}
+                  <option value="{{ h }}" {% if mapeamento.data_vencimento == h %}selected{% endif %}>{{ h }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div>
+              <label class="mb-1 block text-xs text-slate-400">Data de pagamento</label>
+              <select name="col_data_pagamento" class="w-full rounded-xl border border-white/10 bg-darkbg px-3 py-2 text-sm text-white">
+                <option value="">Nenhuma</option>
+                {% for h in headers %}
+                  <option value="{{ h }}" {% if mapeamento.data_pagamento == h %}selected{% endif %}>{{ h }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div>
+              <label class="mb-1 block text-xs text-slate-400">Plano de conta</label>
+              <select name="col_plano_conta" class="w-full rounded-xl border border-white/10 bg-darkbg px-3 py-2 text-sm text-white">
+                <option value="">Nenhuma</option>
+                {% for h in headers %}
+                  <option value="{{ h }}" {% if mapeamento.plano_conta == h %}selected{% endif %}>{{ h }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div>
+              <label class="mb-1 block text-xs text-slate-400">Conta bancária</label>
+              <select name="col_conta_bancaria" class="w-full rounded-xl border border-white/10 bg-darkbg px-3 py-2 text-sm text-white">
+                <option value="">Nenhuma</option>
+                {% for h in headers %}
+                  <option value="{{ h }}" {% if mapeamento.conta_bancaria == h %}selected{% endif %}>{{ h }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div>
+              <label class="mb-1 block text-xs text-slate-400">Tags</label>
+              <select name="col_tags" class="w-full rounded-xl border border-white/10 bg-darkbg px-3 py-2 text-sm text-white">
+                <option value="">Nenhuma</option>
+                {% for h in headers %}
+                  <option value="{{ h }}" {% if mapeamento.tags == h %}selected{% endif %}>{{ h }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div>
+              <label class="mb-1 block text-xs text-slate-400">Status</label>
+              <select name="col_status" class="w-full rounded-xl border border-white/10 bg-darkbg px-3 py-2 text-sm text-white">
+                <option value="">Nenhuma</option>
+                {% for h in headers %}
+                  <option value="{{ h }}" {% if mapeamento.status == h %}selected{% endif %}>{{ h }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div>
+              <label class="mb-1 block text-xs text-slate-400">Forma de pagamento</label>
+              <select name="col_formato_pagamento" class="w-full rounded-xl border border-white/10 bg-darkbg px-3 py-2 text-sm text-white">
+                <option value="">Nenhuma</option>
+                {% for h in headers %}
+                  <option value="{{ h }}" {% if mapeamento.formato_pagamento == h %}selected{% endif %}>{{ h }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div>
+              <label class="mb-1 block text-xs text-slate-400">Frequência</label>
+              <select name="col_frequencia" class="w-full rounded-xl border border-white/10 bg-darkbg px-3 py-2 text-sm text-white">
+                <option value="">Nenhuma</option>
+                {% for h in headers %}
+                  <option value="{{ h }}" {% if mapeamento.frequencia == h %}selected{% endif %}>{{ h }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+        </div>
+      {% endif %}
+
+      <div class="flex justify-end">
+        <button type="submit" class="inline-flex items-center rounded-2xl bg-neonprimary px-5 py-2 text-sm font-semibold text-slate-950 transition hover:brightness-110">Gerar Preview</button>
+      </div>
+    </form>
+  </section>
+
+  {% if preview %}
+    <section class="glass-panel mt-8 rounded-[28px] p-6 shadow-2xl shadow-black/10">
+      <div class="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+        <h2 class="text-xl font-semibold text-white">Preview da Importação</h2>
+        <div class="text-sm text-slate-300">
+          {{ preview.total_rows }} linhas analisadas • {{ preview.total_invalidas }} com pendências
+        </div>
+      </div>
+
+      <div class="mt-5 overflow-x-auto">
+        <table class="min-w-full divide-y divide-white/10">
+          <thead>
+            <tr class="text-left text-xs uppercase tracking-[0.2em] text-slate-500">
+              <th class="py-3 pr-4">Linha</th>
+              <th class="px-4 py-3">Descrição</th>
+              <th class="px-4 py-3">Tipo</th>
+              <th class="px-4 py-3 text-right">Valor</th>
+              <th class="px-4 py-3">Vencimento</th>
+              <th class="px-4 py-3">Plano</th>
+              <th class="px-4 py-3">Conta</th>
+              <th class="px-4 py-3">Status</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-white/5 text-sm text-slate-200">
+            {% for row in preview.rows %}
+              <tr class="{% if row.erros %}bg-red-500/5{% else %}hover:bg-white/[0.03]{% endif %}">
+                <td class="py-3 pr-4 text-slate-400">{{ row.linha }}</td>
+                <td class="px-4 py-3 text-white">{{ row.descricao }}</td>
+                <td class="px-4 py-3">{{ row.tipo }}</td>
+                <td class="px-4 py-3 text-right">R$ {{ row.valor|default:'-' }}</td>
+                <td class="px-4 py-3">{{ row.data_vencimento|date:'d/m/Y' }}</td>
+                <td class="px-4 py-3">
+                  {% if row.plano_conta_id %}
+                    <span class="text-emerald-300">Resolvido ({{ row.origens.plano }})</span>
+                  {% else %}
+                    <span class="text-red-300">{{ row.raw.plano|default:'-' }}</span>
+                  {% endif %}
+                </td>
+                <td class="px-4 py-3">
+                  {% if row.conta_bancaria_id %}
+                    <span class="text-emerald-300">Resolvido ({{ row.origens.conta }})</span>
+                  {% else %}
+                    <span class="text-red-300">{{ row.raw.conta|default:'-' }}</span>
+                  {% endif %}
+                </td>
+                <td class="px-4 py-3">
+                  {% if row.erros %}
+                    <span class="text-red-300">{{ row.erros|join:', ' }}</span>
+                  {% else %}
+                    <span class="text-emerald-300">OK</span>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <form method="post" action="{% url 'transacoes:confirmar_importacao_transacoes' %}" class="mt-8 space-y-6">
+        {% csrf_token %}
+
+        {% if preview.unresolved.plano or preview.unresolved.conta or preview.unresolved.tag %}
+          <div class="rounded-2xl border border-yellow-400/30 bg-yellow-500/10 p-4 text-sm text-yellow-100">
+            Existem valores pendentes de reconciliação. Preencha os vínculos abaixo para concluir a importação.
+          </div>
+        {% endif %}
+
+        {% if preview.unresolved.plano %}
+          <div>
+            <h3 class="mb-3 text-sm font-semibold uppercase tracking-[0.2em] text-slate-400">Mapeamento Manual • Plano de Conta</h3>
+            <div class="space-y-3">
+              {% for key, item in preview.unresolved.plano.items %}
+                <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+                  <div class="rounded-xl border border-white/10 bg-darkbg px-3 py-2 text-sm text-white">{{ item.raw }}</div>
+                  <select name="manual_plano_{{ key }}" class="w-full rounded-xl border border-white/10 bg-darkbg px-3 py-2 text-sm text-white">
+                    <option value="">Selecione o plano</option>
+                    {% for s in item.sugestoes %}
+                      <option value="{{ s.id }}">Sugestão: {{ s.nome }} ({{ s.score }})</option>
+                    {% endfor %}
+                    {% for plano in planos_conta %}
+                      <option value="{{ plano.id }}">{{ plano.codigo }} - {{ plano.nome }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+        {% endif %}
+
+        {% if preview.unresolved.conta %}
+          <div>
+            <h3 class="mb-3 text-sm font-semibold uppercase tracking-[0.2em] text-slate-400">Mapeamento Manual • Conta Bancária</h3>
+            <div class="space-y-3">
+              {% for key, item in preview.unresolved.conta.items %}
+                <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+                  <div class="rounded-xl border border-white/10 bg-darkbg px-3 py-2 text-sm text-white">{{ item.raw }}</div>
+                  <select name="manual_conta_{{ key }}" class="w-full rounded-xl border border-white/10 bg-darkbg px-3 py-2 text-sm text-white">
+                    <option value="">Selecione a conta</option>
+                    {% for s in item.sugestoes %}
+                      <option value="{{ s.id }}">Sugestão: {{ s.nome }} ({{ s.score }})</option>
+                    {% endfor %}
+                    {% for conta in contas_bancarias %}
+                      <option value="{{ conta.id }}">{{ conta.nome }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+        {% endif %}
+
+        {% if preview.unresolved.tag %}
+          <div>
+            <h3 class="mb-3 text-sm font-semibold uppercase tracking-[0.2em] text-slate-400">Mapeamento Manual • Tags</h3>
+            <div class="space-y-3">
+              {% for key, item in preview.unresolved.tag.items %}
+                <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+                  <div class="rounded-xl border border-white/10 bg-darkbg px-3 py-2 text-sm text-white">{{ item.raw }}</div>
+                  <select name="manual_tag_{{ key }}" class="w-full rounded-xl border border-white/10 bg-darkbg px-3 py-2 text-sm text-white">
+                    <option value="">Selecione a tag</option>
+                    {% for s in item.sugestoes %}
+                      <option value="{{ s.id }}">Sugestão: {{ s.nome }} ({{ s.score }})</option>
+                    {% endfor %}
+                    {% for tag in tags %}
+                      <option value="{{ tag.id }}">{{ tag.nome }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+        {% endif %}
+
+        {% if preview.unresolved.tag %}
+          <label class="inline-flex items-center gap-2 text-sm text-slate-300">
+            <input type="checkbox" name="criar_tags_nao_localizadas" value="1" class="h-4 w-4 rounded border-white/10 bg-darkbg text-neonprimary focus:ring-neonprimary" />
+            Criar automaticamente as tags não localizadas
+          </label>
+        {% endif %}
+
+        <label class="inline-flex items-center gap-2 text-sm text-slate-300">
+          <input type="checkbox" name="criar_aliases" value="1" checked class="h-4 w-4 rounded border-white/10 bg-darkbg text-neonprimary focus:ring-neonprimary" />
+          Salvar mapeamentos manuais como aliases para próximas importações
+        </label>
+
+        <div class="flex justify-end">
+          <button type="submit" class="inline-flex items-center rounded-2xl bg-neonprimary px-5 py-2 text-sm font-semibold text-slate-950 transition hover:brightness-110">Confirmar Importação</button>
+        </div>
+      </form>
+    </section>
+  {% endif %}
+</div>
+{% endblock %}

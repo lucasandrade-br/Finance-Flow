@@ -2,6 +2,56 @@
 
 {% block title %}Lancamentos Futuros - Finance Flow{% endblock %}
 
+{% block extra_head %}
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" />
+  <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+  <style>
+    .select2-container--default .select2-selection--single {
+      background-color: #000000;
+      border: 1px solid rgba(255,255,255,0.10);
+      border-radius: 1rem;
+      height: auto;
+      min-height: 48px;
+      padding: 0.35rem 1rem;
+      display: flex;
+      align-items: center;
+      transition: border 0.2s;
+    }
+    .select2-container--default.select2-container--focus .select2-selection--single {
+      border-color: #10b981;
+    }
+    .select2-container--default .select2-selection--single .select2-selection__rendered {
+      color: #fff;
+      padding-left: 0;
+      padding-right: 20px;
+      font-size: 0.875rem;
+      line-height: normal;
+    }
+    .select2-container--default .select2-selection--single .select2-selection__arrow {
+      height: 100%;
+      right: 1rem;
+    }
+    .select2-dropdown {
+      background-color: #090a0e;
+      border-radius: 1rem;
+      border: 1px solid rgba(255,255,255,0.10);
+      color: #fff;
+      box-shadow: 0 4px 24px 0 #0005;
+    }
+    .select2-results__option {
+      color: #fff;
+      padding: 0.75rem 1rem;
+      border-radius: 0.5rem;
+      font-size: 0.95rem;
+    }
+    .select2-container--default .select2-results__option--highlighted.select2-results__option--selectable,
+    .select2-container--default .select2-results__option--highlighted[aria-selected] {
+      background-color: #10b981;
+      color: #0d0e11;
+    }
+  </style>
+{% endblock %}
+
 {% block content %}
 <div class="mx-auto max-w-6xl">
   <section class="glass-panel rounded-[28px] p-8 shadow-2xl shadow-black/10">
@@ -13,30 +63,89 @@
       <a href="{% url 'transacoes:novo_futuro' %}" class="inline-flex items-center rounded-2xl bg-neonprimary px-5 py-2.5 text-sm font-semibold text-slate-950 transition hover:brightness-110">Novo Lancamento</a>
     </div>
 
+    <form method="GET" class="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div>
+        <label for="data_range" class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Vencimento</label>
+        <input id="data_range" name="data_range" type="text" value="{{ filtros.data_range }}" placeholder="Selecione intervalo" class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white outline-none transition focus:border-neonprimary/40" />
+      </div>
+      <div>
+        <label for="tag_id" class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Tags</label>
+        <select id="tag_id" name="tag_id" class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white outline-none transition focus:border-neonprimary/40">
+          <option value="">Todas</option>
+          {% for tag in tags %}
+            <option value="{{ tag.id }}" {% if filtros.tag_id == tag.id|stringformat:'s' %}selected{% endif %}>{{ tag.nome }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label for="status" class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Status</label>
+        <select id="status" name="status" class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white outline-none transition focus:border-neonprimary/40">
+          <option value="">Todos</option>
+          {% for value, label in status_choices %}
+            <option value="{{ value }}" {% if filtros.status == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Valor</label>
+        <div class="grid grid-cols-2 gap-2">
+          <select id="valor_operador" name="valor_operador" class="w-full rounded-2xl border border-white/10 bg-darkbg px-3 py-3 text-sm text-white outline-none transition focus:border-neonprimary/40">
+            <option value="">Comparar</option>
+            <option value="gt" {% if filtros.valor_operador == 'gt' %}selected{% endif %}>Maior que</option>
+            <option value="lt" {% if filtros.valor_operador == 'lt' %}selected{% endif %}>Menor que</option>
+          </select>
+          <input id="valor_filtro" name="valor_filtro" type="text" value="{{ filtros.valor_filtro }}" placeholder="Ex.: 150,00" class="w-full rounded-2xl border border-white/10 bg-darkbg px-3 py-3 text-sm text-white outline-none transition focus:border-neonprimary/40" />
+        </div>
+      </div>
+      <div class="md:col-span-2 xl:col-span-4 flex items-center justify-end gap-3 pt-1">
+        <a href="{% url 'transacoes:lista_futuros' %}" class="inline-flex items-center rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-slate-300 transition hover:bg-white/10">Limpar</a>
+        <button type="submit" class="inline-flex items-center rounded-2xl bg-neonprimary px-5 py-2 text-sm font-semibold text-slate-950 transition hover:brightness-110">Filtrar</button>
+      </div>
+    </form>
+
     <div class="overflow-x-auto rounded-2xl border border-white/10">
       <table class="min-w-full divide-y divide-white/10">
         <thead class="bg-white/5">
           <tr>
             <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Vencimento</th>
-            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Descricao</th>
             <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Categoria</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Tags</th>
             <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Valor</th>
             <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Status</th>
-            <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Ações</th>
+            <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Ações</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-white/5 bg-black/10">
           {% for item in futuros %}
             <tr class="transition hover:bg-white/5">
               <td class="px-4 py-3 text-sm text-slate-100">{{ item.data_vencimento|date:"d/m/Y" }}</td>
-              <td class="px-4 py-3 text-sm text-white">{{ item.descricao }}</td>
-              <td class="px-4 py-3 text-sm text-slate-200">{{ item.plano_conta.nome }}</td>
+              <td class="px-4 py-3 text-sm text-slate-200">{{ item.plano_conta.codigo }} - {{ item.plano_conta.nome }}</td>
+              <td class="px-4 py-3 text-sm text-slate-200">
+                {% if item.tags.all %}
+                  {% for tag in item.tags.all %}
+                    <span class="mr-1 inline-block rounded bg-[#10b981] px-2 py-0.5 text-xs text-[#0f172a]">{{ tag.nome }}</span>
+                  {% endfor %}
+                {% else %}
+                  <span class="text-slate-500">—</span>
+                {% endif %}
+              </td>
               <td class="px-4 py-3 text-right text-sm text-slate-100">R$ {{ item.valor|floatformat:2 }}</td>
               <td class="px-4 py-3 text-center text-sm">
                 <span class="rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-slate-300">{{ item.status }}</span>
               </td>
               <td class="px-4 py-3 text-right text-sm">
                 <div class="inline-flex items-center gap-2">
+                  {% if item.status != 'Injetado' and item.status != 'Cancelado' %}
+                    <button
+                      type="button"
+                      class="btnAbrirModalAdiantar inline-flex rounded-xl border border-emerald-300/20 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-200 transition hover:bg-emerald-500/20"
+                      data-url="{% url 'transacoes:adiantar_futuro' item.id %}"
+                      data-descricao="{{ item.descricao|default:'Sem descricao'|escape }}"
+                      data-valor="{{ item.valor|floatformat:2 }}"
+                    >
+                      Adiantar
+                    </button>
+                  {% endif %}
                   <a href="{% url 'transacoes:painel_edicao' 'futuro' item.id %}" class="inline-flex rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-slate-200 transition hover:bg-white/10">Editar</a>
                   <button
                     type="button"
@@ -75,16 +184,168 @@
       </div>
     </article>
   </div>
+
+  <div id="modalAdiantarBackdrop" class="fixed inset-0 z-40 hidden bg-black/60 backdrop-blur-sm"></div>
+  <div id="modalAdiantar" class="fixed inset-0 z-50 hidden items-center justify-center p-4">
+    <article class="glass-panel w-full max-w-xl rounded-[28px] border border-white/10 p-6 shadow-2xl shadow-black/40">
+      <p class="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Adiantamento</p>
+      <h3 class="mt-2 text-xl font-bold text-white">Adiantar pagamento futuro</h3>
+      <p id="textoModalAdiantar" class="mt-3 text-sm text-slate-300">Defina como deseja adiantar este lancamento.</p>
+
+      <form id="formAdiantar" method="POST" action="" class="mt-5 space-y-5">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ request.get_full_path }}" />
+
+        <div>
+          <p class="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Tipo de adiantamento</p>
+          <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <label class="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-slate-200">
+              <input type="radio" name="modo_adiantamento" value="total" class="accent-emerald-400" checked />
+              Total
+            </label>
+            <label class="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-slate-200">
+              <input type="radio" name="modo_adiantamento" value="parcial" class="accent-emerald-400" />
+              Parcial
+            </label>
+          </div>
+        </div>
+
+        <div>
+          <label for="valor_adiantamento" class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Valor do adiantamento</label>
+          <input id="valor_adiantamento" name="valor_adiantamento" type="text" class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white outline-none transition focus:border-neonprimary/40" disabled />
+          <p id="ajudaValorAdiantamento" class="mt-1 text-xs text-slate-500"></p>
+        </div>
+
+        <div>
+          <label for="data_pagamento_adiantamento" class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Data de pagamento</label>
+          <input id="data_pagamento_adiantamento" name="data_pagamento" type="date" value="{{ hoje|date:'Y-m-d' }}" class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white outline-none transition focus:border-neonprimary/40" />
+        </div>
+
+        <div>
+          <label for="destino_adiantamento" class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Destino da movimentacao</label>
+          <select id="destino_adiantamento" name="destino" class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white outline-none transition focus:border-neonprimary/40">
+            <option value="avulso" selected>Avulso (status Validado)</option>
+            {% if ciclo_ativo %}
+              <option value="ciclo">Ciclo ativo (status Pendente)</option>
+            {% else %}
+              <option value="ciclo" disabled>Ciclo ativo indisponivel</option>
+            {% endif %}
+          </select>
+        </div>
+
+        <div class="flex items-center justify-end gap-3">
+          <button id="cancelarAdiantar" type="button" class="inline-flex items-center rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-slate-300 transition hover:bg-white/10">Cancelar</button>
+          <button type="submit" class="inline-flex items-center rounded-2xl bg-neonprimary px-5 py-2.5 text-sm font-semibold text-slate-950 transition hover:brightness-110">Confirmar adiantamento</button>
+        </div>
+      </form>
+    </article>
+  </div>
 </div>
 
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/pt.js"></script>
 <script>
   (function () {
+    $('#tag_id, #status, #valor_operador').select2({
+      theme: 'default',
+      width: '100%',
+      placeholder: 'Selecione uma opção...',
+      allowClear: true,
+    });
+
+    const inputData = document.getElementById('data_range');
+    if (inputData && window.flatpickr) {
+      flatpickr(inputData, {
+        mode: 'range',
+        dateFormat: 'Y-m-d',
+        locale: 'pt',
+        rangeSeparator: ' até ',
+        allowInput: true,
+      });
+    }
+
     const modal = document.getElementById('modalExcluir');
     const backdrop = document.getElementById('modalExcluirBackdrop');
     const btnCancelar = document.getElementById('cancelarExcluir');
     const formExcluir = document.getElementById('formConfirmarExcluir');
     const textoModal = document.getElementById('textoModalExcluir');
     const botoes = Array.from(document.querySelectorAll('.btnAbrirModalExcluir'));
+
+    const modalAdiantar = document.getElementById('modalAdiantar');
+    const backdropAdiantar = document.getElementById('modalAdiantarBackdrop');
+    const btnCancelarAdiantar = document.getElementById('cancelarAdiantar');
+    const formAdiantar = document.getElementById('formAdiantar');
+    const textoModalAdiantar = document.getElementById('textoModalAdiantar');
+    const inputValorAdiantamento = document.getElementById('valor_adiantamento');
+    const ajudaValorAdiantamento = document.getElementById('ajudaValorAdiantamento');
+    const radiosModoAdiantamento = Array.from(document.querySelectorAll('input[name="modo_adiantamento"]'));
+    const botoesAdiantar = Array.from(document.querySelectorAll('.btnAbrirModalAdiantar'));
+
+    let valorMaximoAdiantamento = 0;
+
+    function parseValor(texto) {
+      if (!texto) {
+        return 0;
+      }
+      const normalizado = String(texto).replace(/\./g, '').replace(',', '.').trim();
+      const valor = Number(normalizado);
+      return Number.isFinite(valor) ? valor : 0;
+    }
+
+    function formatarValor(valor) {
+      return Number(valor || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function atualizarCampoValorAdiantamento() {
+      const modoSelecionado = (radiosModoAdiantamento.find(function (item) { return item.checked; }) || {}).value || 'total';
+      if (!inputValorAdiantamento || !ajudaValorAdiantamento) {
+        return;
+      }
+
+      if (modoSelecionado === 'total') {
+        inputValorAdiantamento.value = formatarValor(valorMaximoAdiantamento);
+        inputValorAdiantamento.disabled = true;
+        ajudaValorAdiantamento.textContent = 'Valor total do lancamento: R$ ' + formatarValor(valorMaximoAdiantamento);
+      } else {
+        inputValorAdiantamento.disabled = false;
+        if (!inputValorAdiantamento.value) {
+          inputValorAdiantamento.value = formatarValor(valorMaximoAdiantamento);
+        }
+        ajudaValorAdiantamento.textContent = 'Informe um valor maior que 0 e até R$ ' + formatarValor(valorMaximoAdiantamento) + '.';
+      }
+    }
+
+    function abrirModalAdiantar(url, descricao, valorMaximo) {
+      if (!modalAdiantar || !backdropAdiantar || !formAdiantar || !textoModalAdiantar) {
+        return;
+      }
+
+      valorMaximoAdiantamento = parseValor(valorMaximo);
+      formAdiantar.action = url;
+      textoModalAdiantar.textContent = 'Defina como deseja adiantar "' + (descricao || 'este lancamento') + '".';
+
+      radiosModoAdiantamento.forEach(function (radio) {
+        radio.checked = radio.value === 'total';
+      });
+      atualizarCampoValorAdiantamento();
+
+      modalAdiantar.classList.remove('hidden');
+      modalAdiantar.classList.add('flex');
+      backdropAdiantar.classList.remove('hidden');
+      document.body.classList.add('overflow-hidden');
+    }
+
+    function fecharModalAdiantar() {
+      if (!modalAdiantar || !backdropAdiantar) {
+        return;
+      }
+      modalAdiantar.classList.add('hidden');
+      modalAdiantar.classList.remove('flex');
+      backdropAdiantar.classList.add('hidden');
+      document.body.classList.remove('overflow-hidden');
+    }
 
     function abrirModal(url, descricao) {
       if (!modal || !backdrop || !formExcluir || !textoModal) {
@@ -114,15 +375,51 @@
       });
     });
 
+    botoesAdiantar.forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        abrirModalAdiantar(
+          btn.getAttribute('data-url'),
+          btn.getAttribute('data-descricao'),
+          btn.getAttribute('data-valor')
+        );
+      });
+    });
+
+    radiosModoAdiantamento.forEach(function (radio) {
+      radio.addEventListener('change', atualizarCampoValorAdiantamento);
+    });
+
+    if (formAdiantar) {
+      formAdiantar.addEventListener('submit', function (event) {
+        const modoSelecionado = (radiosModoAdiantamento.find(function (item) { return item.checked; }) || {}).value || 'total';
+        if (modoSelecionado !== 'parcial' || !inputValorAdiantamento) {
+          return;
+        }
+
+        const valorInformado = parseValor(inputValorAdiantamento.value);
+        if (valorInformado <= 0 || valorInformado > valorMaximoAdiantamento) {
+          event.preventDefault();
+          alert('Informe um valor de adiantamento válido até R$ ' + formatarValor(valorMaximoAdiantamento) + '.');
+        }
+      });
+    }
+
     if (btnCancelar) {
       btnCancelar.addEventListener('click', fecharModal);
     }
     if (backdrop) {
       backdrop.addEventListener('click', fecharModal);
     }
+    if (btnCancelarAdiantar) {
+      btnCancelarAdiantar.addEventListener('click', fecharModalAdiantar);
+    }
+    if (backdropAdiantar) {
+      backdropAdiantar.addEventListener('click', fecharModalAdiantar);
+    }
     document.addEventListener('keydown', function (event) {
       if (event.key === 'Escape') {
         fecharModal();
+        fecharModalAdiantar();
       }
     });
   })();

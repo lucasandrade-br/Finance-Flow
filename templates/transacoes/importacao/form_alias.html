@@ -1,0 +1,137 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}{% if alias %}Editar{% else %}Novo{% endif %} Alias — Finance Flow{% endblock %}
+
+{% block extra_head %}
+  <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+  <style>
+    .select2-container--default .select2-selection--single {
+      background-color: #000000;
+      border: 1px solid rgba(255,255,255,0.10);
+      border-radius: 1rem;
+      min-height: 48px;
+      padding: 0.35rem 1rem;
+      display: flex;
+      align-items: center;
+    }
+    .select2-container--default .select2-selection--single .select2-selection__rendered {
+      color: #fff;
+      padding-left: 0;
+      padding-right: 20px;
+      font-size: 0.875rem;
+      line-height: normal;
+    }
+    .select2-dropdown {
+      background-color: #090a0e;
+      border-radius: 1rem;
+      border: 1px solid rgba(255,255,255,0.10);
+      color: #fff;
+      box-shadow: 0 4px 24px 0 #0005;
+    }
+  </style>
+{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-4xl">
+  <div>
+    <p class="text-sm font-medium uppercase tracking-[0.3em] text-gray-500">Importação</p>
+    <h1 class="mt-2 text-4xl font-bold tracking-tight text-white">{% if alias %}Editar{% else %}Novo{% endif %} Alias</h1>
+    <p class="mt-2 text-sm text-slate-400">Vincule um nome externo a uma entidade interna para reconciliação automática.</p>
+  </div>
+
+  <section class="glass-panel mt-6 rounded-[28px] p-6 shadow-2xl shadow-black/10">
+    <form method="post" class="space-y-5">
+      {% csrf_token %}
+      {% if alias %}
+        <input type="hidden" name="alias_id" value="{{ alias.id }}" />
+      {% endif %}
+
+      {% if erro_formulario %}
+        <div class="rounded-2xl border border-red-400/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+          {{ erro_formulario }}
+        </div>
+      {% endif %}
+
+      <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
+        <div>
+          <label for="entidade" class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Entidade</label>
+          <select id="entidade" name="entidade" class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white outline-none transition focus:border-neonprimary/40">
+            {% for value, label in entidades %}
+              <option value="{{ value }}" {% if entidade == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label for="valor_externo" class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Valor Externo</label>
+          <input id="valor_externo" name="valor_externo" value="{{ alias.valor_externo|default:'' }}" required placeholder="Ex.: Tio Nado" class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white outline-none transition focus:border-neonprimary/40" />
+        </div>
+      </div>
+
+      <div id="campoTag" class="{% if entidade != 'Tag' %}hidden{% endif %}">
+        <label for="tag_id" class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Tag de Destino</label>
+        <select id="tag_id" name="tag_id" class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white">
+          <option value="">Selecione</option>
+          {% for tag in tags %}
+            <option value="{{ tag.id }}" {% if alias.tag_id == tag.id %}selected{% endif %}>{{ tag.nome }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div id="campoPlano" class="{% if entidade != 'PlanoConta' %}hidden{% endif %}">
+        <label for="plano_conta_id" class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Plano de Conta de Destino</label>
+        <select id="plano_conta_id" name="plano_conta_id" class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white">
+          <option value="">Selecione</option>
+          {% for plano in planos_conta %}
+            <option value="{{ plano.id }}" {% if alias.plano_conta_id == plano.id %}selected{% endif %}>{{ plano.codigo }} - {{ plano.nome }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div id="campoConta" class="{% if entidade != 'ContaBancaria' %}hidden{% endif %}">
+        <label for="conta_bancaria_id" class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Conta Bancária de Destino</label>
+        <select id="conta_bancaria_id" name="conta_bancaria_id" class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white">
+          <option value="">Selecione</option>
+          {% for conta in contas_bancarias %}
+            <option value="{{ conta.id }}" {% if alias.conta_bancaria_id == conta.id %}selected{% endif %}>{{ conta.nome }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <label class="inline-flex items-center gap-2 text-sm text-slate-300">
+        <input type="checkbox" name="ativo" value="1" {% if alias and alias.ativo %}checked{% elif not alias %}checked{% endif %} class="h-4 w-4 rounded border-white/10 bg-darkbg text-neonprimary focus:ring-neonprimary" />
+        Alias ativo
+      </label>
+
+      <div class="flex items-center justify-end gap-3 pt-2">
+        <a href="{% url 'transacoes:lista_aliases_importacao' %}" class="inline-flex items-center rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-slate-300 transition hover:bg-white/10">Cancelar</a>
+        <button type="submit" class="inline-flex items-center rounded-2xl bg-neonprimary px-5 py-2 text-sm font-semibold text-slate-950 transition hover:brightness-110">Salvar Alias</button>
+      </div>
+    </form>
+  </section>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+  <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+  <script>
+    $(function () {
+      $('#tag_id, #plano_conta_id, #conta_bancaria_id').select2({ width: '100%' });
+
+      const entidadeField = document.getElementById('entidade');
+      const campoTag = document.getElementById('campoTag');
+      const campoPlano = document.getElementById('campoPlano');
+      const campoConta = document.getElementById('campoConta');
+
+      function atualizarCampos() {
+        const entidade = entidadeField.value;
+        campoTag.classList.toggle('hidden', entidade !== 'Tag');
+        campoPlano.classList.toggle('hidden', entidade !== 'PlanoConta');
+        campoConta.classList.toggle('hidden', entidade !== 'ContaBancaria');
+      }
+
+      entidadeField.addEventListener('change', atualizarCampos);
+      atualizarCampos();
+    });
+  </script>
+{% endblock %}

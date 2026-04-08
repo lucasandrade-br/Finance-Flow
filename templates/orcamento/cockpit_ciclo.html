@@ -30,12 +30,21 @@
             <h1 class="text-3xl font-bold tracking-tight text-white">{{ ciclo_ativo.data_inicio|date:"d/m/Y" }} - {{ ciclo_ativo.data_fim|date:"d/m/Y" }}</h1>
         </div>
 
-        <button id="abrirModalNovaMovimentacao" type="button" class="inline-flex items-center justify-center gap-2 rounded-2xl bg-neonprimary px-5 py-2.5 text-sm font-semibold text-slate-950 shadow-lg shadow-neonprimary/20 transition hover:brightness-110">
+        <div class="flex flex-wrap items-center gap-2">
+          <button id="abrirModalVerSaldos" type="button" class="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/15 bg-white/5 px-5 py-2.5 text-sm font-semibold text-slate-200 transition hover:bg-white/10">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3 7h18M3 12h18M3 17h18" />
+            </svg>
+            Ver saldos
+          </button>
+          <button id="abrirModalNovaMovimentacao" type="button" class="inline-flex items-center justify-center gap-2 rounded-2xl bg-neonprimary px-5 py-2.5 text-sm font-semibold text-slate-950 shadow-lg shadow-neonprimary/20 transition hover:brightness-110">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
             </svg>
             Nova Movimentacao
-        </button>
+          </button>
+        </div>
+        
     </div>
     <hr class="my-6 border-t border-white/10" /> 
     <section class="grid grid-cols-1 gap-6">
@@ -81,35 +90,35 @@
         <div class="mb-4 flex items-center justify-between">
           <h3 class="text-xl font-bold text-white">Visao da Tabela</h3>
           <div class="inline-flex rounded-2xl border border-white/10 bg-black/20 p-1">
+            <a href="?visao=pendentes" class="rounded-xl px-3 py-1 text-xs font-semibold uppercase tracking-[0.15em] transition {% if visao_tabela == 'pendentes' %}bg-neonprimary text-slate-950{% else %}text-slate-300 hover:bg-white/10{% endif %}">Pendentes</a>
             <a href="?visao=categorias" class="rounded-xl px-3 py-1 text-xs font-semibold uppercase tracking-[0.15em] transition {% if visao_tabela == 'categorias' %}bg-neonprimary text-slate-950{% else %}text-slate-300 hover:bg-white/10{% endif %}">Por Categoria</a>
             <a href="?visao=movimentacoes" class="rounded-xl px-3 py-1 text-xs font-semibold uppercase tracking-[0.15em] transition {% if visao_tabela == 'movimentacoes' %}bg-neonprimary text-slate-950{% else %}text-slate-300 hover:bg-white/10{% endif %}">Movimentacoes</a>
           </div>
         </div>
 
-        {% if visao_tabela == 'movimentacoes' %}
+        {% if visao_tabela == 'movimentacoes' or visao_tabela == 'pendentes' %}
           <div class="overflow-x-auto rounded-2xl border border-white/10">
             <table class="min-w-full divide-y divide-white/10">
               <thead class="bg-white/5">
                 <tr>
                   <th class="w-10 px-3 py-3 text-center text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Ok</th>
                   <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Vencimento</th>
-                  <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Tipo</th>
-                  <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Descricao</th>
                   <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Categoria</th>
+                  <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Descricao</th>
                   <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Conta</th>
                   <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Status</th>
                   <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Valor</th>
-                  <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Acoes</th>
+                  <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Acoes</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-white/5 bg-black/10">
-                {% for mov in movimentacoes_ciclo %}
-                  <tr class="transition hover:bg-white/5">
+                {% for mov in movimentacoes_tabela %}
+                  <tr class="transition {% if mov.status == 'Pendente' and mov.data_vencimento < hoje %}bg-rose-500/10 hover:bg-rose-500/20{% elif mov.status == 'Pendente' and mov.data_vencimento <= data_alerta_pendente %}bg-amber-500/10 hover:bg-amber-500/20{% else %}hover:bg-white/5{% endif %}">
                     <td class="px-3 py-3 text-center text-sm">
                       {% if mov.status == 'Pendente' %}
                         <form method="POST" action="{% url 'orcamento:confirmar_movimentacao' mov.id %}" class="inline-flex items-center justify-center">
                           {% csrf_token %}
-                          <input type="hidden" name="visao" value="movimentacoes" />
+                          <input type="hidden" name="visao" value="{{ visao_tabela }}" />
                           <input
                             type="checkbox"
                             class="h-4 w-4 cursor-pointer rounded border border-white/20 bg-darkbg text-neonprimary accent-emerald-400"
@@ -122,14 +131,24 @@
                       {% endif %}
                     </td>
                     <td class="px-4 py-3 text-sm text-slate-300">{{ mov.data_vencimento|date:"d/m/Y" }}</td>
-                    <td class="px-4 py-3 text-sm text-white">{{ mov.get_tipo_display }}</td>
+                    <td class="px-4 py-3 text-sm text-slate-300">{% if mov.plano_conta.codigo %}{{ mov.plano_conta.codigo }} - {% endif %}{{ mov.plano_conta.nome }}</td>
                     <td class="px-4 py-3 text-sm text-white">{{ mov.descricao|default:"-" }}</td>
-                    <td class="px-4 py-3 text-sm text-slate-300">{{ mov.plano_conta.nome }}</td>
                     <td class="px-4 py-3 text-sm text-slate-300">{{ mov.conta_bancaria.nome }}</td>
                     <td class="px-4 py-3 text-sm text-slate-300">{{ mov.status }}</td>
-                    <td class="px-4 py-3 text-right text-sm font-medium {% if mov.tipo == 'Receita' or mov.tipo == 'TransfEntrada' %}text-neonprimary{% elif mov.tipo == 'Despesa' or mov.tipo == 'TransfSaida' %}text-neondanger{% else %}text-slate-100{% endif %}">R$ {{ mov.valor|floatformat:2 }}</td>
+                    <td class="px-4 py-3 text-right text-sm font-medium {% if mov.tipo == 'Receita' or mov.tipo == 'TransfEntrada' %}text-neonprimary{% elif mov.tipo == 'Despesa' or mov.tipo == 'TransfSaida' %}text-neondanger{% else %}text-slate-100{% endif %}">{{ mov.valor|floatformat:2 }}</td>
                     <td class="px-4 py-3 text-right text-sm">
                       <div class="inline-flex items-center gap-2">
+                        <form method="POST" action="{% url 'orcamento:remover_movimentacao_do_ciclo' mov.id %}" class="inline-flex">
+                          {% csrf_token %}
+                          <input type="hidden" name="visao" value="{{ visao_tabela }}" />
+                          <button
+                            type="submit"
+                            class="inline-flex rounded-xl border border-amber-300/20 bg-amber-500/10 px-3 py-1.5 text-xs font-medium text-amber-200 transition hover:bg-amber-500/20"
+                            title="Retirar movimentacao do ciclo atual"
+                          >
+                            Retirar
+                          </button>
+                        </form>
                         <button
                           type="button"
                           class="btnAbrirModalEdicao inline-flex rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-slate-200 transition hover:bg-white/10"
@@ -150,7 +169,7 @@
                   </tr>
                 {% empty %}
                   <tr>
-                    <td colspan="9" class="px-4 py-8 text-center text-sm text-slate-400">Nenhuma movimentacao cadastrada neste ciclo.</td>
+                    <td colspan="8" class="px-4 py-8 text-center text-sm text-slate-400">{% if visao_tabela == 'pendentes' %}Nenhuma movimentacao pendente neste ciclo.{% else %}Nenhuma movimentacao cadastrada neste ciclo.{% endif %}</td>
                   </tr>
                 {% endfor %}
               </tbody>
@@ -163,6 +182,7 @@
                 <tr>
                   <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Plano de Conta</th>
                   <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Gasto</th>
+                  <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Media 3M</th>
                   <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Teto</th>
                   <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Margem</th>
                 </tr>
@@ -172,6 +192,7 @@
                   <tr class="transition hover:bg-white/5">
                     <td class="px-4 py-3 text-sm text-white">{{ categoria.nome }}</td>
                     <td class="px-4 py-3 text-right text-sm font-medium text-slate-100">R$ {{ categoria.total_gasto|default:"0.00"|floatformat:2 }}</td>
+                    <td class="px-4 py-3 text-right text-sm font-medium text-slate-100">R$ {{ categoria.media_gastos_3_meses|floatformat:2 }}</td>
                     <td class="px-4 py-3 text-right text-sm font-medium text-slate-100">
                       {% if categoria.tem_teto_categoria %}
                         R$ {{ categoria.teto_categoria|floatformat:2 }}
@@ -189,7 +210,7 @@
                   </tr>
                 {% empty %}
                   <tr>
-                    <td colspan="4" class="px-4 py-8 text-center text-sm text-slate-400">Nenhuma categoria de despesa encontrada.</td>
+                    <td colspan="5" class="px-4 py-8 text-center text-sm text-slate-400">Nenhuma categoria de despesa encontrada.</td>
                   </tr>
                 {% endfor %}
               </tbody>
@@ -225,6 +246,49 @@
               <button id="fecharModalNovaMovimentacao" type="button" class="inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm font-medium text-slate-300 transition hover:bg-white/10">Fechar</button>
             </div>
             {% include "transacoes/padrao/form_lancamento_parcial.html" %}
+        </div>
+      </div>
+
+      <div id="modalVerSaldosBackdrop" class="fixed inset-0 z-40 hidden bg-black/60 backdrop-blur-sm"></div>
+      <div id="modalVerSaldos" class="fixed inset-0 z-50 hidden overflow-y-auto p-4 md:p-8">
+        <div class="mx-auto max-w-4xl">
+          <article class="glass-panel rounded-[28px] border border-white/10 p-6 shadow-2xl shadow-black/40">
+            <div class="mb-5 flex items-center justify-between gap-3">
+              <div>
+                <p class="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Resumo por conta</p>
+                <h3 class="mt-1 text-xl font-bold text-white">Saldos do ciclo ativo</h3>
+              </div>
+              <button id="fecharModalVerSaldos" type="button" class="inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm font-medium text-slate-300 transition hover:bg-white/10">Fechar</button>
+            </div>
+
+            <div class="overflow-x-auto rounded-2xl border border-white/10">
+              <table class="min-w-full divide-y divide-white/10">
+                <thead class="bg-white/5">
+                  <tr>
+                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Conta Bancaria</th>
+                    <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Entradas</th>
+                    <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Saldo Atual</th>
+                    <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Saldo Previsto</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-white/5 bg-black/10">
+                  {% for resumo_conta in resumo_contas_ciclo %}
+                    <tr class="transition hover:bg-white/5">
+                      <td class="px-4 py-3 text-sm text-white">{{ resumo_conta.conta_nome }}</td>
+                      <td class="px-4 py-3 text-right text-sm font-medium text-neonprimary">R$ {{ resumo_conta.total_entradas|floatformat:2 }}</td>
+                      <td class="px-4 py-3 text-right text-sm font-medium {% if resumo_conta.saldo_atual >= 0 %}text-neonprimary{% else %}text-neondanger{% endif %}">R$ {{ resumo_conta.saldo_atual|floatformat:2 }}</td>
+                      <td class="px-4 py-3 text-right text-sm font-medium {% if resumo_conta.saldo_previsto >= 0 %}text-neonprimary{% else %}text-neondanger{% endif %}">R$ {{ resumo_conta.saldo_previsto|floatformat:2 }}</td>
+                      
+                    </tr>
+                  {% empty %}
+                    <tr>
+                      <td colspan="4" class="px-4 py-8 text-center text-sm text-slate-400">Nao ha contas com movimentacoes neste ciclo.</td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </article>
         </div>
       </div>
 
@@ -312,6 +376,10 @@
       const btnFechar = document.getElementById('fecharModalNovaMovimentacao');
       const modal = document.getElementById('modalNovaMovimentacao');
       const backdrop = document.getElementById('modalNovaMovimentacaoBackdrop');
+      const btnAbrirVerSaldos = document.getElementById('abrirModalVerSaldos');
+      const btnFecharVerSaldos = document.getElementById('fecharModalVerSaldos');
+      const modalVerSaldos = document.getElementById('modalVerSaldos');
+      const backdropVerSaldos = document.getElementById('modalVerSaldosBackdrop');
       const botoesAbrirEdicao = Array.from(document.querySelectorAll('.btnAbrirModalEdicao'));
       const btnFecharEdicao = document.getElementById('fecharModalEdicaoMovimentacao');
       const modalEdicao = document.getElementById('modalEdicaoMovimentacao');
@@ -343,6 +411,24 @@
       function fecharModal() {
         modal.classList.add('hidden');
         backdrop.classList.add('hidden');
+        document.body.classList.remove('overflow-hidden');
+      }
+
+      function abrirModalVerSaldos() {
+        if (!modalVerSaldos || !backdropVerSaldos) {
+          return;
+        }
+        modalVerSaldos.classList.remove('hidden');
+        backdropVerSaldos.classList.remove('hidden');
+        document.body.classList.add('overflow-hidden');
+      }
+
+      function fecharModalVerSaldos() {
+        if (!modalVerSaldos || !backdropVerSaldos) {
+          return;
+        }
+        modalVerSaldos.classList.add('hidden');
+        backdropVerSaldos.classList.add('hidden');
         document.body.classList.remove('overflow-hidden');
       }
 
@@ -418,6 +504,16 @@
       }
       backdrop.addEventListener('click', fecharModal);
 
+      if (btnAbrirVerSaldos) {
+        btnAbrirVerSaldos.addEventListener('click', abrirModalVerSaldos);
+      }
+      if (btnFecharVerSaldos) {
+        btnFecharVerSaldos.addEventListener('click', fecharModalVerSaldos);
+      }
+      if (backdropVerSaldos) {
+        backdropVerSaldos.addEventListener('click', fecharModalVerSaldos);
+      }
+
       botoesAbrirEdicao.forEach(function (btn) {
         btn.addEventListener('click', function () {
           const url = btn.getAttribute('data-url');
@@ -468,6 +564,7 @@
       document.addEventListener('keydown', function (event) {
         if (event.key === 'Escape') {
           fecharModal();
+          fecharModalVerSaldos();
           fecharModalEdicao();
           fecharModalEncerrar();
           fecharModalExcluir();

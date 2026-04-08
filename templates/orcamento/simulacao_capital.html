@@ -1,0 +1,252 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Simulacao de Capital - Finance Flow{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-[96rem] space-y-6">
+  <section class="glass-panel rounded-[28px] p-6">
+    <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+      <div>
+        <p class="text-xs font-semibold uppercase tracking-[0.28em] text-slate-500">Simulacao Anual</p>
+        <h1 class="mt-2 text-3xl font-bold tracking-tight text-white">Capital Planejado vs Obrigacoes</h1>
+        <p class="mt-2 text-sm text-slate-400">Cruza a matriz de planejamento com movimentacoes recorrentes/anuais para estimar o saldo acumulado do ano.</p>
+      </div>
+
+      <div class="inline-flex items-center gap-3 rounded-2xl border border-white/10 bg-black/20 px-3 py-2">
+        <a href="{% url 'orcamento:simulacao_capital_ano' ano_anterior_link %}?saldo_inicial={{ saldo_inicial }}" class="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-slate-300 transition hover:bg-white/10">&lt;</a>
+        <span class="min-w-20 text-center text-lg font-semibold text-white">{{ ano_selecionado }}</span>
+        <a href="{% url 'orcamento:simulacao_capital_ano' ano_proximo_link %}?saldo_inicial={{ saldo_inicial }}" class="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-slate-300 transition hover:bg-white/10">&gt;</a>
+      </div>
+    </div>
+
+    <form method="GET" class="mt-5 grid grid-cols-1 gap-4 md:grid-cols-[180px_1fr_auto] md:items-end">
+      <input type="hidden" name="ano" value="{{ ano_selecionado }}" />
+      <div>
+        <label for="saldo_inicial" class="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Saldo inicial</label>
+        <input id="saldo_inicial" name="saldo_inicial" type="number" step="0.01" value="{{ saldo_inicial }}" class="w-full rounded-xl border border-white/10 bg-darkbg px-3 py-2 text-sm text-white outline-none transition focus:border-neonprimary/40" />
+      </div>
+      <div class="text-xs text-slate-500 md:pb-2">Use este valor para simular o acumulado mes a mes.</div>
+      <button type="submit" class="inline-flex items-center rounded-xl bg-neonprimary px-5 py-2.5 text-sm font-semibold text-slate-950 transition hover:brightness-110">Atualizar Simulacao</button>
+    </form>
+  </section>
+
+  <section class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+    <article class="glass-panel rounded-2xl border border-white/10 p-4">
+      <p class="text-xs uppercase tracking-[0.2em] text-slate-500">Entradas Planejadas (Ano)</p>
+      <p class="mt-2 text-lg font-semibold text-white">R$ {{ resumo.total_entradas_planejadas|floatformat:2 }}</p>
+    </article>
+    <article class="glass-panel rounded-2xl border border-white/10 p-4">
+      <p class="text-xs uppercase tracking-[0.2em] text-slate-500">Saidas Planejadas (Ano)</p>
+      <p class="mt-2 text-lg font-semibold text-white">R$ {{ resumo.total_saidas_planejadas|floatformat:2 }}</p>
+    </article>
+    <article class="glass-panel rounded-2xl border border-white/10 p-4">
+      <p class="text-xs uppercase tracking-[0.2em] text-slate-500">Saidas Obrigatorias (Ano)</p>
+      <p class="mt-2 text-lg font-semibold text-white">R$ {{ resumo.total_saidas_obrigatorias|floatformat:2 }}</p>
+    </article>
+    <article class="glass-panel rounded-2xl border border-white/10 p-4">
+      <p class="text-xs uppercase tracking-[0.2em] text-slate-500">Saldo Final Projetado</p>
+      <p class="mt-2 text-lg font-semibold {% if resumo.saldo_final_ano >= 0 %}text-neonprimary{% else %}text-neondanger{% endif %}">R$ {{ resumo.saldo_final_ano|floatformat:2 }}</p>
+    </article>
+    <article class="glass-panel rounded-2xl border border-white/10 p-4">
+      <p class="text-xs uppercase tracking-[0.2em] text-slate-500">Entradas Realizadas (Ano)</p>
+      <p class="mt-2 text-lg font-semibold text-white">R$ {{ resumo.total_entradas_realizadas|floatformat:2 }}</p>
+    </article>
+    <article class="glass-panel rounded-2xl border border-white/10 p-4">
+      <p class="text-xs uppercase tracking-[0.2em] text-slate-500">Saidas Realizadas (Ano)</p>
+      <p class="mt-2 text-lg font-semibold text-white">R$ {{ resumo.total_saidas_realizadas|floatformat:2 }}</p>
+    </article>
+    <article class="glass-panel rounded-2xl border border-white/10 p-4">
+      <p class="text-xs uppercase tracking-[0.2em] text-slate-500">Saldo Final Realizado</p>
+      <p class="mt-2 text-lg font-semibold {% if resumo.saldo_final_realizado >= 0 %}text-neonprimary{% else %}text-neondanger{% endif %}">R$ {{ resumo.saldo_final_realizado|floatformat:2 }}</p>
+    </article>
+    <article class="glass-panel rounded-2xl border border-white/10 p-4">
+      <p class="text-xs uppercase tracking-[0.2em] text-slate-500">Saldo Atual Projetado</p>
+      <p class="mt-2 text-lg font-semibold {% if resumo.saldo_atual_projetado >= 0 %}text-neonprimary{% else %}text-neondanger{% endif %}">R$ {{ resumo.saldo_atual_projetado|floatformat:2 }}</p>
+    </article>
+  </section>
+
+  <section class="glass-panel rounded-[28px] p-6">
+    <div class="mb-4 flex items-center justify-between">
+      <h2 class="text-lg font-semibold text-white">Evolucao Mensal</h2>
+      <p class="text-xs uppercase tracking-[0.16em] text-slate-500">Entradas x Saidas x Saldo</p>
+    </div>
+    <div class="h-[360px]">
+      <canvas id="graficoSimulacao"></canvas>
+    </div>
+  </section>
+
+  <section class="glass-panel rounded-[28px] p-6">
+    <h2 class="mb-4 text-lg font-semibold text-white">Tabela de Simulacao Mensal</h2>
+    <div class="overflow-x-auto rounded-2xl border border-white/10">
+      <table class="min-w-full divide-y divide-white/10">
+        <thead class="bg-white/5">
+          <tr>
+            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Mes</th>
+            <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Entradas Planejadas</th>
+            <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Saidas Planejadas</th>
+            <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Saidas Obrigatorias</th>
+            <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Folga de Saida</th>
+            <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Saldo Acumulado</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-white/5 bg-black/10">
+          {% for item in simulacao_mensal %}
+            <tr class="transition hover:bg-white/5">
+              <td class="px-4 py-3 text-sm font-medium text-white">{{ item.mes_label }}</td>
+              <td class="px-4 py-3 text-right text-sm text-slate-100">R$ {{ item.entrada_planejada|floatformat:2 }}</td>
+              <td class="px-4 py-3 text-right text-sm text-slate-100">R$ {{ item.saida_planejada|floatformat:2 }}</td>
+              <td class="px-4 py-3 text-right text-sm text-slate-100">R$ {{ item.saida_obrigatoria|floatformat:2 }}</td>
+              <td class="px-4 py-3 text-right text-sm {% if item.folga_saida >= 0 %}text-neonprimary{% else %}text-neondanger{% endif %}">R$ {{ item.folga_saida|floatformat:2 }}</td>
+              <td class="px-4 py-3 text-right text-sm {% if item.saldo_acumulado >= 0 %}text-neonprimary{% else %}text-neondanger{% endif %}">R$ {{ item.saldo_acumulado|floatformat:2 }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+  {{ chart_labels|json_script:"chart-labels-data" }}
+  {{ chart_entradas|json_script:"chart-entradas-data" }}
+  {{ chart_saidas|json_script:"chart-saidas-data" }}
+  {{ chart_saldo|json_script:"chart-saldo-data" }}
+  {{ chart_entradas_realizadas|json_script:"chart-entradas-realizadas-data" }}
+  {{ chart_saidas_realizadas|json_script:"chart-saidas-realizadas-data" }}
+  {{ chart_saldo_realizado|json_script:"chart-saldo-realizado-data" }}
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    (function () {
+      const ctx = document.getElementById('graficoSimulacao');
+      if (!ctx) {
+        return;
+      }
+
+      const labels = JSON.parse(document.getElementById('chart-labels-data').textContent);
+      const entradas = JSON.parse(document.getElementById('chart-entradas-data').textContent);
+      const saidas = JSON.parse(document.getElementById('chart-saidas-data').textContent);
+      const saldo = JSON.parse(document.getElementById('chart-saldo-data').textContent);
+      const entradasRealizadas = JSON.parse(document.getElementById('chart-entradas-realizadas-data').textContent);
+      const saidasRealizadas = JSON.parse(document.getElementById('chart-saidas-realizadas-data').textContent);
+      const saldoRealizado = JSON.parse(document.getElementById('chart-saldo-realizado-data').textContent);
+
+      new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [
+            {
+              label: 'Entradas Planejadas',
+              data: entradas,
+              backgroundColor: 'rgba(16, 185, 129, 0.65)',
+              borderColor: 'rgba(16, 185, 129, 1)',
+              borderWidth: 1,
+              stack: 'entradas',
+              grouped: true,
+              categoryPercentage: 1.0,
+              barPercentage: 0.92,
+              maxBarThickness: 54,
+              order: 2,
+            },
+            {
+              label: 'Saidas Planejadas',
+              data: saidas,
+              backgroundColor: 'rgba(244, 63, 94, 0.55)',
+              borderColor: 'rgba(244, 63, 94, 1)',
+              borderWidth: 1,
+              stack: 'saidas',
+              grouped: true,
+              categoryPercentage: 1.0,
+              barPercentage: 0.92,
+              maxBarThickness: 54,
+              order: 2,
+            },
+            {
+              label: 'Entradas Realizadas',
+              data: entradasRealizadas,
+              backgroundColor: 'rgba(16, 185, 129, 0.28)',
+              borderColor: 'rgba(16, 185, 129, 0.55)',
+              borderWidth: 1,
+              stack: 'entradas',
+              grouped: true,
+              categoryPercentage: 1.0,
+              barPercentage: 0.92,
+              maxBarThickness: 54,
+              order: 1,
+            },
+            {
+              label: 'Saidas Realizadas',
+              data: saidasRealizadas,
+              backgroundColor: 'rgba(244, 63, 94, 0.24)',
+              borderColor: 'rgba(244, 63, 94, 0.50)',
+              borderWidth: 1,
+              stack: 'saidas',
+              grouped: true,
+              categoryPercentage: 1.0,
+              barPercentage: 0.92,
+              maxBarThickness: 54,
+              order: 1,
+            },
+            {
+              type: 'line',
+              label: 'Saldo Acumulado Planejado',
+              data: saldo,
+              borderColor: 'rgba(56, 189, 248, 0.60)',
+              backgroundColor: 'rgba(56, 189, 248, 0.08)',
+              borderWidth: 2,
+              tension: 0.25,
+              yAxisID: 'ySaldo',
+              pointRadius: 2,
+              order: 1,
+            },
+            {
+              type: 'line',
+              label: 'Saldo Acumulado Realizado',
+              data: saldoRealizado,
+              borderColor: 'rgba(251, 146, 60, 0.58)',
+              backgroundColor: 'rgba(251, 146, 60, 0.10)',
+              borderWidth: 2,
+              tension: 0.25,
+              yAxisID: 'ySaldo',
+              pointRadius: 2,
+              order: 1,
+            },
+          ],
+        },
+        options: {
+          maintainAspectRatio: false,
+          responsive: true,
+          scales: {
+            x: {
+              stacked: false,
+              ticks: { color: '#cbd5e1' },
+              grid: { color: 'rgba(148, 163, 184, 0.08)' },
+            },
+            y: {
+              position: 'left',
+              stacked: false,
+              ticks: { color: '#cbd5e1' },
+              grid: { color: 'rgba(148, 163, 184, 0.08)' },
+            },
+            ySaldo: {
+              position: 'right',
+              stacked: false,
+              ticks: { color: '#94a3b8' },
+              grid: { drawOnChartArea: false },
+            },
+          },
+          plugins: {
+            legend: {
+              labels: { color: '#e2e8f0' },
+            },
+            tooltip: {
+              mode: 'index',
+              intersect: false,
+            },
+          },
+        },
+      });
+    })();
+  </script>
+{% endblock %}

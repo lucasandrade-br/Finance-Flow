@@ -76,7 +76,7 @@ function interceptarFormLancamento() {
     // Extrai todos os campos obrigatórios do form
     const tipo = form.tipo.value;
     const valor = form.valor.value;
-    const descricao = form.descricao.value;
+    const descricao = (form.descricao.value || '').trim();
     const data_pagamento = form.data_pagamento.value;
     const plano_conta_id = form.plano_conta_id.value;
     const conta_bancaria_id = form.conta_bancaria_id.value;
@@ -90,7 +90,10 @@ function interceptarFormLancamento() {
       // fallback para select padrão
       tag_ids = Array.from(form.tagsSelect2.selectedOptions).map(opt => opt.value);
     }
-    if (!tipo || !valor || !descricao || !plano_conta_id || !conta_bancaria_id) return;
+    // Descrição é opcional no formulário padrão; não bloquear submit por esse campo.
+    if (!tipo || !valor || !data_pagamento || !plano_conta_id || !conta_bancaria_id || !status || !formato_pagamento) {
+      return;
+    }
     bufferLancamentos.push({
       tipo,
       valor,
@@ -104,9 +107,14 @@ function interceptarFormLancamento() {
     });
     atualizarPainelBuffer();
     form.reset();
+    const valorVisual = document.getElementById('valor_visual');
+    const valorReal = document.getElementById('valor_real');
+    if (valorVisual) valorVisual.value = '';
+    if (valorReal) valorReal.value = '';
     // Mantém tipo padrão como Despesa
     form.tipo.value = 'Despesa';
     if (window.jQuery && $(form.tipo).data('select2')) $(form.tipo).val('Despesa').trigger('change');
+    if (window.jQuery && $('#tagsSelect2').data('select2')) $('#tagsSelect2').val(null).trigger('change');
   });
 }
 
