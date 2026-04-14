@@ -1,0 +1,347 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Relatórios de Investimentos{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-7xl space-y-6">
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <p class="text-xs font-semibold uppercase tracking-[0.28em] text-slate-500">Investimentos</p>
+      <h1 class="mt-2 text-3xl font-bold tracking-tight text-white">Relatórios e BI</h1>
+      <p class="mt-2 text-sm text-slate-400">Visão analítica mensal com filtros por papel, setor e tipo de ativo.</p>
+    </div>
+    <div class="flex flex-wrap items-center gap-2">
+      <a href="{% url 'investimentos:painel_investimentos' %}" class="inline-flex items-center rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-slate-300 transition hover:bg-white/10">Voltar ao Painel</a>
+      <a href="{% url 'investimentos:historico_investimentos' %}" class="inline-flex items-center rounded-2xl border border-neonprimary/30 bg-neonprimary/10 px-4 py-2 text-sm font-medium text-neonprimary transition hover:brightness-110">Abrir Extrato Completo</a>
+    </div>
+  </div>
+
+  <section class="glass-panel rounded-[28px] p-6 shadow-2xl shadow-black/10">
+    <form method="GET" class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-6">
+      <div>
+        <label class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Ano</label>
+        <select name="ano" class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white outline-none transition focus:border-neonprimary/40">
+          {% for ano in anos_disponiveis %}
+            <option value="{{ ano }}" {% if ano == ano_alvo %}selected{% endif %}>{{ ano }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Papel</label>
+        <select name="ativo_id" class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white outline-none transition focus:border-neonprimary/40">
+          <option value="">Todos</option>
+          {% for ativo in ativos_disponiveis %}
+            <option value="{{ ativo.id }}" {% if filtros.ativo_id == ativo.id|stringformat:'s' %}selected{% endif %}>{{ ativo.ticker|default:ativo.nome }} - {{ ativo.nome }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Setor</label>
+        <select name="setor" class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white outline-none transition focus:border-neonprimary/40">
+          <option value="">Todos</option>
+          {% for setor_item in setores_disponiveis %}
+            <option value="{{ setor_item }}" {% if filtros.setor == setor_item %}selected{% endif %}>{{ setor_item }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Tipo de Ativo</label>
+        <select name="tipo_ativo" class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white outline-none transition focus:border-neonprimary/40">
+          <option value="">Todos</option>
+          {% for value, label in tipos_ativo %}
+            <option value="{{ value }}" {% if filtros.tipo_ativo == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="space-y-3">
+        <label class="inline-flex items-center gap-2 text-sm text-slate-300">
+          <input id="toggleCompararAnos" type="checkbox" name="comparar_anos" value="1" {% if comparar_anos_ativo %}checked{% endif %} class="h-4 w-4 rounded border-white/20 bg-darkbg text-neonprimary focus:ring-neonprimary/30" />
+          Ativar comparação entre anos
+        </label>
+        <div id="blocoAgrupamento">
+          <label class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Agrupamento do Gráfico</label>
+          <select name="agrupamento" class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-2.5 text-sm text-white outline-none transition focus:border-neonprimary/40">
+            <option value="anos" {% if agrupamento == 'anos' %}selected{% endif %}>Por anos</option>
+            <option value="meses" {% if agrupamento == 'meses' %}selected{% endif %}>Por meses</option>
+          </select>
+        </div>
+      </div>
+      <div id="blocoCompararAnos">
+        <label class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Comparar Anos</label>
+        <select name="anos_comparar" multiple size="4" class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-2 text-sm text-white outline-none transition focus:border-neonprimary/40">
+          {% for ano in anos_disponiveis %}
+            <option value="{{ ano }}" {% if ano|stringformat:'s' in anos_comparar %}selected{% endif %}>{{ ano }}</option>
+          {% endfor %}
+        </select>
+        <p class="mt-1 text-xs text-slate-500">Selecione 2+ anos para comparação anual.</p>
+      </div>
+      <div class="flex items-end justify-end gap-2">
+        <a href="{% url 'investimentos:relatorios_investimentos' %}" class="inline-flex items-center rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-slate-300 transition hover:bg-white/10">Limpar</a>
+        <button type="submit" class="inline-flex items-center rounded-2xl bg-neonprimary px-4 py-3 text-sm font-semibold text-slate-950 transition hover:brightness-110">Aplicar</button>
+      </div>
+    </form>
+  </section>
+
+  <section class="space-y-6">
+    {% if modo_comparativo %}
+      <article class="glass-panel rounded-[28px] p-6 shadow-2xl shadow-black/10">
+        <h2 class="text-lg font-semibold text-white">Comparativo Anual</h2>
+        <p class="mt-1 text-sm text-slate-400">Resumo dos anos selecionados com os mesmos filtros aplicados.</p>
+
+        <div class="mt-4 overflow-x-auto rounded-2xl border border-white/10">
+          <table class="min-w-full divide-y divide-white/10">
+            <thead class="bg-white/5">
+              <tr>
+                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Ano</th>
+                <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Compras</th>
+                <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Rendas</th>
+                <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Capital no Ano</th>
+                <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Patrimônio Acumulado</th>
+                <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Yield %</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-white/5 bg-black/10">
+              {% for item in resumos_comparativos %}
+                <tr>
+                  <td class="px-4 py-3 text-sm font-medium text-white">{{ item.ano }}</td>
+                  <td class="px-4 py-3 text-right text-sm text-slate-200">R$ {{ item.compras_ano|floatformat:2 }}</td>
+                  <td class="px-4 py-3 text-right text-sm text-neonprimary">R$ {{ item.renda_ano|floatformat:2 }}</td>
+                  <td class="px-4 py-3 text-right text-sm {% if item.capital_ano >= 0 %}text-neonprimary{% else %}text-rose-300{% endif %}">R$ {{ item.capital_ano|floatformat:2 }}</td>
+                  <td class="px-4 py-3 text-right text-sm text-slate-200">R$ {{ item.capital_final|floatformat:2 }}</td>
+                  <td class="px-4 py-3 text-right text-sm text-neonprimary">{{ item.yield_anual|floatformat:2 }}%</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </article>
+
+      <article class="glass-panel rounded-[28px] p-6 shadow-2xl shadow-black/10">
+        <h2 class="text-lg font-semibold text-white">Evolução Entre Anos</h2>
+        <p class="mt-1 text-sm text-slate-400">Comparação de compras, rendas e patrimônio acumulado com agrupamento {{ agrupamento }}.</p>
+        <div class="mt-4 rounded-2xl border border-white/10 bg-black/10 p-4">
+          <canvas id="graficoComparativoAnual" height="100"></canvas>
+        </div>
+      </article>
+    {% else %}
+    <article class="glass-panel rounded-[28px] p-6 shadow-2xl shadow-black/10">
+      <h2 class="text-lg font-semibold text-white">Resumo {{ ano_alvo }}</h2>
+      <div class="mt-4 grid grid-cols-1 gap-4 md:grid-cols-4">
+        <div class="rounded-2xl border border-white/10 bg-black/10 p-4">
+          <p class="text-xs uppercase tracking-[0.2em] text-slate-500">Capital no Ano</p>
+          <p class="mt-2 text-2xl font-bold text-white">R$ {{ resumo_anual.capital_ano|floatformat:2 }}</p>
+        </div>
+        <div class="rounded-2xl border border-white/10 bg-black/10 p-4">
+          <p class="text-xs uppercase tracking-[0.2em] text-slate-500">Renda no Ano</p>
+          <p class="mt-2 text-2xl font-bold text-neonprimary">R$ {{ resumo_anual.renda_ano|floatformat:2 }}</p>
+        </div>
+        <div class="rounded-2xl border border-white/10 bg-black/10 p-4">
+          <p class="text-xs uppercase tracking-[0.2em] text-slate-500">Capital Acumulado Final</p>
+          <p class="mt-2 text-2xl font-bold text-white">R$ {{ resumo_anual.capital_final|floatformat:2 }}</p>
+        </div>
+        <div class="rounded-2xl border border-white/10 bg-black/10 p-4">
+          <p class="text-xs uppercase tracking-[0.2em] text-slate-500">Yield Anual</p>
+          <p class="mt-2 text-2xl font-bold text-neonprimary">{{ resumo_anual.yield_anual|floatformat:2 }}%</p>
+        </div>
+      </div>
+    </article>
+
+    <article class="glass-panel rounded-[28px] p-6 shadow-2xl shadow-black/10">
+      <h2 class="text-lg font-semibold text-white">Visual Analítico Mensal</h2>
+      <p class="mt-1 text-sm text-slate-400">Patrimônio acumulado, compras e rendas por mês.</p>
+      <div class="mt-4 rounded-2xl border border-white/10 bg-black/10 p-4">
+        <canvas id="graficoAnaliticoInvestimentos" height="95"></canvas>
+      </div>
+    </article>
+
+    <article class="glass-panel rounded-[28px] p-6 shadow-2xl shadow-black/10">
+      <h2 class="text-lg font-semibold text-white">Matriz Analítica Mensal</h2>
+      <div class="mt-4 overflow-x-auto rounded-2xl border border-white/10">
+        <table class="min-w-full divide-y divide-white/10">
+          <thead class="bg-white/5">
+            <tr>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Mês</th>
+              <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Compras</th>
+              <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Vendas</th>
+              <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Capital no Mês</th>
+              <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Capital Acumulado</th>
+              <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Renda do Mês</th>
+              <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Yield %</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-white/5 bg-black/10">
+            {% for linha in matriz_analitica %}
+              <tr>
+                <td class="px-4 py-3 text-sm font-medium text-white">{{ linha.mes_label }}</td>
+                <td class="px-4 py-3 text-right text-sm text-slate-200">R$ {{ linha.compras_mes|floatformat:2 }}</td>
+                <td class="px-4 py-3 text-right text-sm text-slate-200">R$ {{ linha.vendas_mes|floatformat:2 }}</td>
+                <td class="px-4 py-3 text-right text-sm {% if linha.capital_mes >= 0 %}text-neonprimary{% else %}text-rose-300{% endif %}">R$ {{ linha.capital_mes|floatformat:2 }}</td>
+                <td class="px-4 py-3 text-right text-sm text-slate-200">R$ {{ linha.capital_acumulado|floatformat:2 }}</td>
+                <td class="px-4 py-3 text-right text-sm text-neonprimary">R$ {{ linha.renda_mes|floatformat:2 }}</td>
+                <td class="px-4 py-3 text-right text-sm text-neonprimary">{{ linha.yield_mes|floatformat:2 }}%</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </article>
+    {% endif %}
+  </section>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{{ grafico.labels|json_script:"inv-chart-labels" }}
+{{ grafico.patrimonio|json_script:"inv-chart-patrimonio" }}
+{{ grafico.compras|json_script:"inv-chart-compras" }}
+{{ grafico.rendas|json_script:"inv-chart-rendas" }}
+{{ grafico_anual.labels|json_script:"inv-chart-anual-labels" }}
+{{ grafico_anual.patrimonio|json_script:"inv-chart-anual-patrimonio" }}
+{{ grafico_anual.compras|json_script:"inv-chart-anual-compras" }}
+{{ grafico_anual.rendas|json_script:"inv-chart-anual-rendas" }}
+{{ grafico_comparativo.labels|json_script:"inv-chart-comp-labels" }}
+{{ grafico_comparativo.patrimonio|json_script:"inv-chart-comp-patrimonio" }}
+{{ grafico_comparativo.compras|json_script:"inv-chart-comp-compras" }}
+{{ grafico_comparativo.rendas|json_script:"inv-chart-comp-rendas" }}
+<script>
+  (function () {
+    const toggleCompararAnos = document.getElementById('toggleCompararAnos');
+    const blocoCompararAnos = document.getElementById('blocoCompararAnos');
+    const blocoAgrupamento = document.getElementById('blocoAgrupamento');
+
+    function atualizarVisibilidadeComparacao() {
+      if (!toggleCompararAnos) {
+        return;
+      }
+      const ativo = toggleCompararAnos.checked;
+      if (blocoCompararAnos) {
+        blocoCompararAnos.classList.toggle('hidden', !ativo);
+      }
+      if (blocoAgrupamento) {
+        blocoAgrupamento.classList.toggle('hidden', !ativo);
+      }
+    }
+
+    if (toggleCompararAnos) {
+      toggleCompararAnos.addEventListener('change', atualizarVisibilidadeComparacao);
+      atualizarVisibilidadeComparacao();
+    }
+
+    if (!window.Chart) {
+      return;
+    }
+
+    function buildOptions() {
+      return {
+        responsive: true,
+        plugins: {
+          legend: {
+            labels: { color: '#cbd5e1' }
+          }
+        },
+        scales: {
+          x: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+          y: {
+            ticks: { color: '#94a3b8' },
+            grid: { color: 'rgba(255,255,255,0.06)' },
+            title: { display: true, text: 'Compras / Rendas', color: '#94a3b8' }
+          },
+          yPatrimonio: {
+            position: 'right',
+            ticks: { color: '#22d3ee' },
+            grid: { drawOnChartArea: false },
+            title: { display: true, text: 'Patrimônio Acumulado', color: '#22d3ee' }
+          }
+        }
+      };
+    }
+
+    const ctxMensal = document.getElementById('graficoAnaliticoInvestimentos');
+    if (ctxMensal) {
+      const labels = JSON.parse(document.getElementById('inv-chart-labels').textContent);
+      const patrimonio = JSON.parse(document.getElementById('inv-chart-patrimonio').textContent);
+      const compras = JSON.parse(document.getElementById('inv-chart-compras').textContent);
+      const rendas = JSON.parse(document.getElementById('inv-chart-rendas').textContent);
+
+      new Chart(ctxMensal, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [
+            {
+              label: 'Compras',
+              data: compras,
+              backgroundColor: 'rgba(148, 163, 184, 0.35)',
+              borderColor: 'rgba(148, 163, 184, 1)',
+              borderWidth: 1,
+              yAxisID: 'y',
+            },
+            {
+              label: 'Rendas',
+              data: rendas,
+              backgroundColor: 'rgba(16, 185, 129, 0.35)',
+              borderColor: 'rgba(16, 185, 129, 1)',
+              borderWidth: 1,
+              yAxisID: 'y',
+            },
+            {
+              label: 'Patrimônio Acumulado',
+              data: patrimonio,
+              borderColor: 'rgba(34, 211, 238, 1)',
+              backgroundColor: 'rgba(34, 211, 238, 0.15)',
+              borderWidth: 2,
+              pointRadius: 2,
+              type: 'line',
+              yAxisID: 'yPatrimonio',
+            },
+          ]
+        },
+        options: buildOptions(),
+      });
+    }
+
+    const ctxAnual = document.getElementById('graficoComparativoAnual');
+    if (ctxAnual) {
+      const labelsAnuais = JSON.parse(document.getElementById('inv-chart-comp-labels').textContent);
+      const patrimonioAnual = JSON.parse(document.getElementById('inv-chart-comp-patrimonio').textContent);
+      const comprasAnual = JSON.parse(document.getElementById('inv-chart-comp-compras').textContent);
+      const rendasAnual = JSON.parse(document.getElementById('inv-chart-comp-rendas').textContent);
+
+      new Chart(ctxAnual, {
+        type: 'bar',
+        data: {
+          labels: labelsAnuais,
+          datasets: [
+            {
+              label: 'Compras no Ano',
+              data: comprasAnual,
+              backgroundColor: 'rgba(148, 163, 184, 0.35)',
+              borderColor: 'rgba(148, 163, 184, 1)',
+              borderWidth: 1,
+              yAxisID: 'y',
+            },
+            {
+              label: 'Rendas no Ano',
+              data: rendasAnual,
+              backgroundColor: 'rgba(16, 185, 129, 0.35)',
+              borderColor: 'rgba(16, 185, 129, 1)',
+              borderWidth: 1,
+              yAxisID: 'y',
+            },
+            {
+              label: 'Patrimônio Acumulado',
+              data: patrimonioAnual,
+              borderColor: 'rgba(34, 211, 238, 1)',
+              backgroundColor: 'rgba(34, 211, 238, 0.15)',
+              borderWidth: 2,
+              pointRadius: 2,
+              type: 'line',
+              yAxisID: 'yPatrimonio',
+            },
+          ]
+        },
+        options: buildOptions(),
+      });
+    }
+  })();
+</script>
+{% endblock %}

@@ -1,0 +1,326 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Gestão de Ativos{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-7xl">
+  <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+    <div>
+      <p class="text-sm font-medium uppercase tracking-[0.3em] text-gray-500">Investimentos</p>
+      <h1 class="mt-2 text-4xl font-bold tracking-tight text-white">Gestão de Ativos</h1>
+      <p class="mt-2 max-w-2xl text-sm text-slate-400">Cadastro e manutenção da tabela de ativos da carteira.</p>
+    </div>
+    <div class="inline-flex items-center gap-2">
+      <button id="abrirModalNovoAtivo" type="button" class="inline-flex items-center rounded-2xl bg-neonprimary px-5 py-3 text-sm font-semibold text-slate-950 transition hover:brightness-110">Novo Ativo</button>
+      <a href="{% url 'investimentos:painel_investimentos' %}" class="inline-flex items-center rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-slate-300 transition hover:bg-white/10">Voltar ao Painel</a>
+    </div>
+  </div>
+
+  {% if erro_formulario %}
+    <div class="mt-6 rounded-2xl border border-rose-400/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">{{ erro_formulario }}</div>
+  {% endif %}
+  {% if sucesso_formulario %}
+    <div class="mt-6 rounded-2xl border border-neonprimary/20 bg-neonprimary/10 px-4 py-3 text-sm text-neonprimary">{{ sucesso_formulario }}</div>
+  {% endif %}
+
+  <section class="glass-panel mt-8 overflow-hidden rounded-[28px] p-6 shadow-2xl shadow-black/10">
+    <form method="GET" class="mb-6 grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-5">
+      <div>
+        <label class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Tipo</label>
+        <select name="tipo" class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white outline-none transition focus:border-neonprimary/40">
+          <option value="">Todos</option>
+          {% for value, label in tipos_ativo %}
+            <option value="{{ value }}" {% if filtros.tipo == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Nome / Ticker</label>
+        <input name="nome" type="text" value="{{ filtros.nome }}" placeholder="Buscar por nome ou ticker" class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white outline-none transition focus:border-neonprimary/40" />
+      </div>
+      <div>
+        <label class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Setor</label>
+        <input list="setores-lista" name="setor" type="text" value="{{ filtros.setor }}" placeholder="Ex: Energia" class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white outline-none transition focus:border-neonprimary/40" />
+        <datalist id="setores-lista">
+          {% for setor_item in setores_disponiveis %}
+            <option value="{{ setor_item }}"></option>
+          {% endfor %}
+        </datalist>
+      </div>
+      <div class="flex items-center pt-8">
+        <label class="inline-flex items-center gap-2 text-sm text-slate-300">
+          <input type="checkbox" name="mostrar_zerados" value="1" {% if filtros.mostrar_zerados %}checked{% endif %} class="h-4 w-4 rounded border-white/20 bg-darkbg text-neonprimary focus:ring-neonprimary/30" />
+          Mostrar quantidade zerada
+        </label>
+      </div>
+      <div class="flex items-end justify-end gap-2">
+        <a href="{% url 'investimentos:gestao_ativos' %}" class="inline-flex items-center rounded-2xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-medium text-slate-300 transition hover:bg-white/10">Limpar</a>
+        <button type="submit" class="inline-flex items-center rounded-2xl bg-neonprimary px-4 py-2.5 text-sm font-semibold text-slate-950 transition hover:brightness-110">Filtrar</button>
+      </div>
+    </form>
+
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-white/10">
+        <thead>
+          <tr class="text-left text-xs uppercase tracking-[0.2em] text-slate-500">
+            <th class="py-3 pr-4">Ticker</th>
+            <th class="px-4 py-3">Nome</th>
+            <th class="px-4 py-3">Setor</th>
+            <th class="px-4 py-3">Tipo</th>
+            <th class="px-4 py-3 text-right">Qtd Atual</th>
+            <th class="px-4 py-3 text-right">Preço Médio</th>
+            <th class="px-4 py-3 text-right">% Alvo</th>
+            <th class="px-4 py-3 text-right">Ações</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-white/5 bg-black/10 text-sm text-slate-200">
+          {% for ativo in ativos %}
+            <tr class="transition hover:bg-white/[0.03]">
+              <td class="py-3 pr-4 text-white">{{ ativo.ticker|default:'-' }}</td>
+              <td class="px-4 py-3 text-white">{{ ativo.nome }}</td>
+              <td class="px-4 py-3 text-slate-300">{{ ativo.setor|default:'-' }}</td>
+              <td class="px-4 py-3 text-slate-300">{{ ativo.get_tipo_display }}</td>
+              <td class="px-4 py-3 text-right text-slate-200">{{ ativo.quantidade_atual|floatformat:2 }}</td>
+              <td class="px-4 py-3 text-right text-slate-200">R$ {{ ativo.preco_medio|floatformat:2 }}</td>
+              <td class="px-4 py-3 text-right text-slate-200">{{ ativo.percentual_alvo|floatformat:2 }}%</td>
+              <td class="px-4 py-3 text-right">
+                <div class="inline-flex items-center gap-2">
+                  <button
+                    type="button"
+                    class="btnAbrirModalEditar inline-flex rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-slate-200 transition hover:bg-white/10"
+                    data-id="{{ ativo.id }}"
+                    data-ticker="{{ ativo.ticker|default:'' }}"
+                    data-nome="{{ ativo.nome|escape }}"
+                    data-setor="{{ ativo.setor|default:''|escape }}"
+                    data-tipo="{{ ativo.tipo }}"
+                    data-quantidade="{{ ativo.quantidade_atual|floatformat:8 }}"
+                    data-preco="{{ ativo.preco_medio|floatformat:8 }}"
+                    data-alvo="{{ ativo.percentual_alvo|floatformat:2 }}"
+                  >
+                    Editar
+                  </button>
+                  <form method="POST" action="" onsubmit="return confirm('Excluir o ativo {{ ativo.ticker|default:ativo.nome }}?');" class="inline-flex">
+                    {% csrf_token %}
+                    <input type="hidden" name="acao" value="excluir" />
+                    <input type="hidden" name="ativo_id" value="{{ ativo.id }}" />
+                    <button type="submit" class="inline-flex rounded-xl border border-rose-300/20 bg-rose-500/10 px-3 py-1.5 text-xs font-medium text-rose-200 transition hover:bg-rose-500/20">Excluir</button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="8" class="py-10 text-center text-sm text-slate-500">Nenhum ativo encontrado com os filtros selecionados.</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <div id="backdropNovoAtivo" class="fixed inset-0 z-40 hidden bg-black/60 backdrop-blur-sm"></div>
+  <div id="modalNovoAtivo" class="fixed inset-0 z-50 hidden items-center justify-center p-4">
+    <section class="glass-panel w-full max-w-3xl rounded-[28px] p-6 shadow-2xl shadow-black/20">
+      <div class="mb-6">
+        <h2 class="text-2xl font-bold text-white">Novo Ativo</h2>
+        <p class="mt-1 text-sm text-slate-400">Cadastre um novo ativo para gestão da carteira.</p>
+      </div>
+
+      <form method="POST" class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {% csrf_token %}
+        <input type="hidden" name="acao" value="criar" />
+
+        <div>
+          <label class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Ticker</label>
+          <input name="ticker" type="text" placeholder="WEGE3" class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm uppercase text-white outline-none transition focus:border-neonprimary/40" />
+        </div>
+        <div class="lg:col-span-2">
+          <label class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Nome</label>
+          <input name="nome" type="text" required placeholder="WEG S.A." class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white outline-none transition focus:border-neonprimary/40" />
+        </div>
+        <div>
+          <label class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Setor</label>
+          <input name="setor" type="text" placeholder="Energia" class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white outline-none transition focus:border-neonprimary/40" />
+        </div>
+        <div>
+          <label class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Tipo</label>
+          <select name="tipo" required class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white outline-none transition focus:border-neonprimary/40">
+            {% for value, label in tipos_ativo %}
+              <option value="{{ value }}">{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Quantidade</label>
+          <input name="quantidade_atual" type="number" step="0.00000001" min="0" value="0" class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white outline-none transition focus:border-neonprimary/40" />
+        </div>
+        <div>
+          <label class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Preço Médio</label>
+          <input name="preco_medio" type="number" step="0.00000001" min="0" value="0" class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white outline-none transition focus:border-neonprimary/40" />
+        </div>
+        <div>
+          <label class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">% Alvo</label>
+          <input name="percentual_alvo" type="number" step="0.01" min="0" max="100" value="0" class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white outline-none transition focus:border-neonprimary/40" />
+        </div>
+
+        <div class="md:col-span-2 lg:col-span-3 flex items-center justify-end gap-3 pt-2">
+          <button type="button" id="btnCancelarNovoAtivo" class="inline-flex items-center rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-slate-300 transition hover:bg-white/10">Cancelar</button>
+          <button type="submit" class="inline-flex items-center rounded-2xl bg-neonprimary px-5 py-2 text-sm font-semibold text-slate-950 transition hover:brightness-110">Cadastrar Ativo</button>
+        </div>
+      </form>
+    </section>
+  </div>
+
+  <div id="backdropEditarAtivo" class="fixed inset-0 z-40 hidden bg-black/60 backdrop-blur-sm"></div>
+  <div id="modalEditarAtivo" class="fixed inset-0 z-50 hidden items-center justify-center p-4">
+    <section class="glass-panel w-full max-w-3xl rounded-[28px] p-6 shadow-2xl shadow-black/20">
+      <div class="mb-6">
+        <h2 class="text-2xl font-bold text-white">Editar Ativo</h2>
+        <p class="mt-1 text-sm text-slate-400">Atualize os dados do ativo selecionado.</p>
+      </div>
+
+      <form method="POST" class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {% csrf_token %}
+        <input type="hidden" name="acao" value="editar" />
+        <input type="hidden" name="ativo_id" id="editar_ativo_id" />
+
+        <div>
+          <label class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Ticker</label>
+          <input id="editar_ticker" name="ticker" type="text" class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm uppercase text-white outline-none transition focus:border-neonprimary/40" />
+        </div>
+        <div class="lg:col-span-2">
+          <label class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Nome</label>
+          <input id="editar_nome" name="nome" type="text" required class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white outline-none transition focus:border-neonprimary/40" />
+        </div>
+        <div>
+          <label class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Setor</label>
+          <input id="editar_setor" name="setor" type="text" class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white outline-none transition focus:border-neonprimary/40" />
+        </div>
+        <div>
+          <label class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Tipo</label>
+          <select id="editar_tipo" name="tipo" required class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white outline-none transition focus:border-neonprimary/40">
+            {% for value, label in tipos_ativo %}
+              <option value="{{ value }}">{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Quantidade</label>
+          <input id="editar_quantidade_atual" name="quantidade_atual" type="number" step="0.00000001" min="0" class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white outline-none transition focus:border-neonprimary/40" />
+        </div>
+        <div>
+          <label class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Preço Médio</label>
+          <input id="editar_preco_medio" name="preco_medio" type="number" step="0.00000001" min="0" class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white outline-none transition focus:border-neonprimary/40" />
+        </div>
+        <div>
+          <label class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">% Alvo</label>
+          <input id="editar_percentual_alvo" name="percentual_alvo" type="number" step="0.01" min="0" max="100" class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white outline-none transition focus:border-neonprimary/40" />
+        </div>
+
+        <div class="md:col-span-2 lg:col-span-3 flex items-center justify-end gap-3 pt-2">
+          <button type="button" id="btnCancelarEditarAtivo" class="inline-flex items-center rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-slate-300 transition hover:bg-white/10">Cancelar</button>
+          <button type="submit" class="inline-flex items-center rounded-2xl bg-neonprimary px-5 py-2 text-sm font-semibold text-slate-950 transition hover:brightness-110">Salvar Alterações</button>
+        </div>
+      </form>
+    </section>
+  </div>
+</div>
+
+<script>
+  (function () {
+    const modalNovo = document.getElementById('modalNovoAtivo');
+    const backdropNovo = document.getElementById('backdropNovoAtivo');
+    const abrirNovo = document.getElementById('abrirModalNovoAtivo');
+    const cancelarNovo = document.getElementById('btnCancelarNovoAtivo');
+
+    const modalEditar = document.getElementById('modalEditarAtivo');
+    const backdropEditar = document.getElementById('backdropEditarAtivo');
+    const cancelarEditar = document.getElementById('btnCancelarEditarAtivo');
+    const botoesEditar = document.querySelectorAll('.btnAbrirModalEditar');
+
+    function abrirModalNovo() {
+      modalNovo.classList.remove('hidden');
+      modalNovo.classList.add('flex');
+      backdropNovo.classList.remove('hidden');
+      document.body.classList.add('overflow-hidden');
+    }
+
+    function fecharModalNovo() {
+      modalNovo.classList.add('hidden');
+      modalNovo.classList.remove('flex');
+      backdropNovo.classList.add('hidden');
+      document.body.classList.remove('overflow-hidden');
+    }
+
+    function abrirModalEditar(btn) {
+      const getAttr = function (name, fallback) {
+        const value = btn.getAttribute(name);
+        return value !== null ? value : fallback;
+      };
+
+      const normalizeNumberForInput = function (value, fallback) {
+        const raw = (value || '').toString().trim();
+        if (!raw) return fallback;
+
+        // Converte formatos locais (1.234,56) para formato aceito pelo input number (1234.56).
+        let normalized = raw.replace(/\s+/g, '').replace(/R\$/g, '');
+        if (normalized.includes(',') && normalized.includes('.')) {
+          if (normalized.lastIndexOf(',') > normalized.lastIndexOf('.')) {
+            normalized = normalized.replace(/\./g, '').replace(',', '.');
+          } else {
+            normalized = normalized.replace(/,/g, '');
+          }
+        } else if (normalized.includes(',')) {
+          normalized = normalized.replace(/\./g, '').replace(',', '.');
+        }
+
+        return normalized || fallback;
+      };
+
+      const row = btn.closest('tr');
+      const cells = row ? row.querySelectorAll('td') : [];
+
+      document.getElementById('editar_ativo_id').value = getAttr('data-id', '');
+      document.getElementById('editar_ticker').value = getAttr('data-ticker', cells[0] ? cells[0].textContent.trim() : '');
+      document.getElementById('editar_nome').value = getAttr('data-nome', cells[1] ? cells[1].textContent.trim() : '');
+      document.getElementById('editar_setor').value = getAttr('data-setor', cells[2] ? cells[2].textContent.trim() : '');
+      document.getElementById('editar_tipo').value = getAttr('data-tipo', '');
+      document.getElementById('editar_quantidade_atual').value = normalizeNumberForInput(getAttr('data-quantidade', ''), '0');
+      document.getElementById('editar_preco_medio').value = normalizeNumberForInput(getAttr('data-preco', ''), '0');
+      document.getElementById('editar_percentual_alvo').value = normalizeNumberForInput(getAttr('data-alvo', ''), '0');
+
+      modalEditar.classList.remove('hidden');
+      modalEditar.classList.add('flex');
+      backdropEditar.classList.remove('hidden');
+      document.body.classList.add('overflow-hidden');
+    }
+
+    function fecharModalEditar() {
+      modalEditar.classList.add('hidden');
+      modalEditar.classList.remove('flex');
+      backdropEditar.classList.add('hidden');
+      document.body.classList.remove('overflow-hidden');
+    }
+
+    if (abrirNovo) abrirNovo.addEventListener('click', abrirModalNovo);
+    if (cancelarNovo) cancelarNovo.addEventListener('click', fecharModalNovo);
+    if (backdropNovo) backdropNovo.addEventListener('click', fecharModalNovo);
+
+    if (cancelarEditar) cancelarEditar.addEventListener('click', fecharModalEditar);
+    if (backdropEditar) backdropEditar.addEventListener('click', fecharModalEditar);
+
+    botoesEditar.forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        abrirModalEditar(btn);
+      });
+    });
+
+    document.addEventListener('keydown', function (event) {
+      if (event.key === 'Escape') {
+        fecharModalNovo();
+        fecharModalEditar();
+      }
+    });
+  })();
+</script>
+{% endblock %}

@@ -20,6 +20,7 @@ from django.views.decorators.http import require_http_methods
 import json
 
 from apps.contas.models import ContaBancaria, PlanoConta, Tag
+from apps.investimentos.models import AportePatrimonial
 from apps.orcamento.models import Ciclo
 from apps.transacoes.models import AliasImportacao, LancamentoFuturo, Movimentacao, MovimentacaoExcluida, TipoTransacao, TransacaoRecorrente
 
@@ -1083,6 +1084,7 @@ def nova_transacao(request):
 			'form_data': form_data,
 			'selected_tags_data': selected_tags_data,
 			'erro_formulario': erro_formulario,
+			'sincronizar_investimento_form': bool(form_data.get('sincronizar_investimento')),
 		}
 
 	if request.method == 'POST':
@@ -1098,6 +1100,7 @@ def nova_transacao(request):
 		frequencia = request.POST.get('frequencia', 'Variavel')
 		comprovante = request.FILES.get('comprovante')
 		tag_ids = request.POST.getlist('tags')
+		sincronizar_investimento = request.POST.get('sincronizar_investimento') == 'on'
 
 		form_data = {
 			'tipo': tipo,
@@ -1111,6 +1114,7 @@ def nova_transacao(request):
 			'formato_pagamento': formato_pagamento,
 			'frequencia': frequencia,
 			'tag_ids': tag_ids,
+			'sincronizar_investimento': sincronizar_investimento,
 		}
 
 		required_fields = [tipo, valor, data_pagamento, conta_bancaria_id, plano_conta_id, status]
@@ -1188,6 +1192,15 @@ def nova_transacao(request):
 
 		if tag_ids:
 			movimentacao.tags.set(tag_ids)
+
+		if tipo == TipoTransacao.INVESTIMENTO and sincronizar_investimento:
+			plano_conta = PlanoConta.objects.filter(pk=plano_conta_id).only('codigo', 'nome').first()
+			if plano_conta and plano_conta.codigo == '3.1.1' and 'renda' in (plano_conta.nome or '').lower():
+				AportePatrimonial.objects.create(
+					valor=movimentacao.valor,
+					descricao='Aporte via Orçamento',
+					id_transacao_origem=movimentacao.id,
+				)
 
 		if next_url:
 			return redirect(next_url)

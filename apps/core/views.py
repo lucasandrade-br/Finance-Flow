@@ -128,7 +128,7 @@ def home(request):
     # Resumo do Mês Corrente
     # ------------------------------------------------------------------
     totais_mes = Movimentacao.objects.filter(
-        status__in=['Efetivado', 'Validado'],
+        status__in=['Pendente','Efetivado', 'Validado'],
         data_pagamento__month=hoje.month,
         data_pagamento__year=hoje.year,
     ).aggregate(
@@ -136,14 +136,16 @@ def home(request):
         despesas=Sum('valor', filter=Q(tipo='Despesa')),
         investimentos=Sum('valor', filter=Q(tipo='Investimento')),
         transferencias_entrada=Sum('valor', filter=Q(tipo='TransfEntrada')),
+        transferencias_saida=Sum('valor', filter=Q(tipo='TransfSaida')),
     )
 
     receitas_mes = totais_mes['receitas'] or Decimal('0')
     despesas_mes = totais_mes['despesas'] or Decimal('0')
     investimentos_mes = totais_mes['investimentos'] or Decimal('0')
     transferencias_entrada_mes = totais_mes['transferencias_entrada'] or Decimal('0')
+    transferencias_saida_mes = totais_mes['transferencias_saida'] or Decimal('0')
     margem_mes = receitas_mes - (despesas_mes + investimentos_mes)
-    saldo_mes = receitas_mes - (despesas_mes + investimentos_mes + transferencias_entrada_mes)
+    saldo_mes = receitas_mes - (despesas_mes + investimentos_mes + transferencias_saida_mes)
 
     totais_3_meses = Movimentacao.objects.annotate(
         data_referencia=Coalesce('data_pagamento', 'data_vencimento')
@@ -155,21 +157,24 @@ def home(request):
         receitas=Sum('valor', filter=Q(tipo='Receita')),
         despesas=Sum('valor', filter=Q(tipo='Despesa')),
         investimentos=Sum('valor', filter=Q(tipo='Investimento')),
+        transferencias_saida=Sum('valor', filter=Q(tipo='TransfSaida')),
     )
 
     media_receitas_3_meses = (totais_3_meses['receitas'] or Decimal('0')) / Decimal('3.00')
     media_despesas_3_meses = (totais_3_meses['despesas'] or Decimal('0')) / Decimal('3.00')
     media_investimentos_3_meses = (totais_3_meses['investimentos'] or Decimal('0')) / Decimal('3.00')
-
+    media_transferencias_saida_3_meses = (totais_3_meses['transferencias_saida'] or Decimal('0')) / Decimal('3.00')
     context = {
         'receitas_mes': receitas_mes,
         'despesas_mes': despesas_mes,
         'investimentos_mes': investimentos_mes,
         'transferencias_entrada_mes': transferencias_entrada_mes,
+        'transferencias_saida_mes': transferencias_saida_mes,
         'saldo_mes': saldo_mes,
         'media_receitas_3_meses': media_receitas_3_meses,
         'media_despesas_3_meses': media_despesas_3_meses,
         'media_investimentos_3_meses': media_investimentos_3_meses,
+        'media_transferencias_saida_3_meses': media_transferencias_saida_3_meses,
         'margem_mes': margem_mes,
         'ciclo_ativo': ciclo_ativo,
         'dias_restantes': dias_restantes,

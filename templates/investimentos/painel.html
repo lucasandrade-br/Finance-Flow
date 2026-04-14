@@ -1,0 +1,124 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Painel de Investimentos - Finance Flow{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-7xl space-y-6">
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <p class="text-xs font-semibold uppercase tracking-[0.28em] text-slate-500">Investimentos</p>
+      <h1 class="mt-2 text-3xl font-bold tracking-tight text-white">Painel da Carteira</h1>
+      <p class="mt-2 text-sm text-slate-400">Isolamento de patrimônio, boleta de ordens e smart rebalance no mesmo fluxo.</p>
+    </div>
+    <div class="flex flex-wrap gap-2">
+      <a href="{% url 'investimentos:relatorios_investimentos' %}" class="inline-flex items-center rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-slate-200 transition hover:bg-white/10">Relatório</a>
+      <a href="{% url 'investimentos:nova_ordem' %}" class="inline-flex items-center rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-slate-200 transition hover:bg-white/10">Nova Ordem</a>
+      <a href="{% url 'investimentos:novo_rendimento' %}" class="inline-flex items-center rounded-2xl bg-neonprimary px-4 py-2 text-sm font-semibold text-slate-950 transition hover:brightness-110">Novo Rendimento</a>
+    </div>
+  </div>
+
+  <section class="grid grid-cols-1 gap-6 lg:grid-cols-12">
+    <article class="glass-panel rounded-3xl p-6 lg:col-span-6">
+      <p class="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Patrimônio Total</p>
+      <p class="mt-4 text-4xl font-bold text-neonprimary">R$ {{ patrimonio_total|floatformat:2 }}</p>
+      <p class="mt-2 text-sm text-slate-400">Baseado em quantidade atual x preço médio por ativo.</p>
+    </article>
+
+    <article class="glass-panel rounded-3xl p-6 lg:col-span-6">
+      <p class="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Saldo Disponível para Aporte</p>
+      <p class="mt-4 text-4xl font-bold {% if saldo_disponivel_rebalance >= 0 %}text-neonprimary{% else %}text-neondanger{% endif %}">R$ {{ saldo_disponivel_rebalance|floatformat:2 }}</p>
+      <p class="mt-2 text-sm text-slate-400">Total de aportes patrimoniais menos total de compras registradas.</p>
+    </article>
+
+    <article class="glass-panel rounded-3xl p-6 lg:col-span-12">
+      <div class="mb-4 flex items-center justify-between">
+        <p class="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Carteira Atual</p>
+      </div>
+      <div class="overflow-x-auto rounded-2xl border border-white/10">
+        <table class="min-w-full divide-y divide-white/10">
+          <thead class="bg-white/5">
+            <tr>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Ticker</th>
+              <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Qtd</th>
+              <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Preço Médio</th>
+              <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">% Alvo</th>
+              <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">% Atual</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-white/5 bg-black/10">
+            {% for ativo in ativos %}
+              {% if ativo.quantidade_atual > 0 %}
+                <tr class="transition hover:bg-white/5">
+                  <td class="px-4 py-3 text-sm font-medium text-white">{{ ativo.ticker|default:ativo.nome }}</td>
+                  <td class="px-4 py-3 text-right text-sm text-slate-200">{{ ativo.quantidade_atual|floatformat:2 }}</td>
+                  <td class="px-4 py-3 text-right text-sm text-slate-200">R$ {{ ativo.preco_medio|floatformat:2 }}</td>
+                  <td class="px-4 py-3 text-right text-sm text-slate-200">{{ ativo.percentual_alvo|floatformat:2 }}%</td>
+                  <td class="px-4 py-3 text-right text-sm {% if ativo.percentual_atual >= ativo.percentual_alvo %}text-neonprimary{% else %}text-amber-300{% endif %}">{{ ativo.percentual_atual|floatformat:2 }}%</td>
+                </tr>
+              {% endif %}
+            {% empty %}
+              <tr>
+                <td colspan="5" class="px-4 py-10 text-center text-sm text-slate-400">Nenhum ativo cadastrado na carteira.</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </article>
+
+    <article class="glass-panel rounded-3xl p-6 lg:col-span-12">
+      <p class="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Smart Rebalance</p>
+      <p class="mt-2 text-sm text-slate-400">Simule um novo aporte e veja quais ativos precisam de compra para aproximar a carteira da distribuição alvo.</p>
+
+      {% if erro_formulario %}
+        <div class="mt-4 rounded-2xl border border-rose-400/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">{{ erro_formulario }}</div>
+      {% endif %}
+
+      <form method="POST" class="mt-5 grid grid-cols-1 gap-4 md:grid-cols-[1fr_auto]">
+        {% csrf_token %}
+        <div>
+          <label for="valor_aporte" class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Valor do Aporte</label>
+          <input id="valor_aporte" name="valor_aporte" type="number" step="0.01" min="0" value="{{ valor_aporte|floatformat:2 }}" class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white outline-none transition focus:border-neonprimary/40" placeholder="0.00" />
+          <p class="mt-2 text-xs text-slate-500">Sugestão automática: R$ {{ saldo_disponivel_rebalance|floatformat:2 }}</p>
+        </div>
+        <div class="self-end">
+          <button type="submit" class="inline-flex h-[50px] items-center rounded-2xl bg-neonprimary px-6 text-sm font-semibold text-slate-950 transition hover:brightness-110">Analisar</button>
+        </div>
+      </form>
+
+      {% if rebalanceamento %}
+        <div class="mt-6 overflow-x-auto rounded-2xl border border-white/10">
+          <table class="min-w-full divide-y divide-white/10">
+            <thead class="bg-white/5">
+              <tr>
+                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Ativo</th>
+                <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Valor Atual</th>
+                <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Valor Ideal</th>
+                <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Diferença</th>
+                <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Qtd Comprar</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-white/5 bg-black/10">
+              {% for item in rebalanceamento.recomendacoes %}
+                <tr>
+                  <td class="px-4 py-3 text-sm font-medium text-white">{{ item.ativo.ticker|default:item.ativo.nome }}</td>
+                  <td class="px-4 py-3 text-right text-sm text-slate-200">R$ {{ item.valor_atual|floatformat:2 }}</td>
+                  <td class="px-4 py-3 text-right text-sm text-slate-200">R$ {{ item.valor_ideal|floatformat:2 }}</td>
+                  <td class="px-4 py-3 text-right text-sm text-neonprimary">R$ {{ item.diferenca|floatformat:2 }}</td>
+                  <td class="px-4 py-3 text-right text-sm text-neonprimary">{{ item.quantidade_comprar|floatformat:8 }}</td>
+                </tr>
+              {% empty %}
+                <tr>
+                  <td colspan="5" class="px-4 py-8 text-center text-sm text-slate-400">A carteira já está equilibrada para este aporte.</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% endif %}
+    </article>
+
+    
+  </section>
+</div>
+{% endblock %}

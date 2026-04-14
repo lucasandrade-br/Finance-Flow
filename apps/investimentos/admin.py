@@ -5,7 +5,7 @@ from .models import Ativo, MetaFinanceira, MetaParcelaMensal, Ordem, Rendimento
 
 @admin.register(Ativo)
 class AtivoAdmin(admin.ModelAdmin):
-    list_display = ('ticker', 'nome', 'tipo')
+    list_display = ('ticker', 'nome', 'tipo', 'quantidade_atual', 'preco_medio', 'percentual_alvo')
     list_filter = ('tipo',)
     search_fields = ('ticker', 'nome')
 

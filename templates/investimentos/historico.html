@@ -1,0 +1,510 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Histórico de Investimentos - Finance Flow{% endblock %}
+
+{% block extra_head %}
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" />
+{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-7xl">
+  <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+    <div>
+      <p class="text-sm font-medium uppercase tracking-[0.3em] text-gray-500">Investimentos</p>
+      <h1 class="mt-2 text-4xl font-bold tracking-tight text-white">Histórico de Operações</h1>
+      <p class="mt-2 max-w-2xl text-sm text-slate-400">Lista consolidada de compras, vendas e rendimentos cadastrados.</p>
+    </div>
+    <div class="inline-flex items-center gap-2">
+      <a href="{% url 'investimentos:importar_operacoes_xlsx' %}" class="inline-flex items-center rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-slate-300 transition hover:bg-white/10">Importar XLSX</a>
+      <a href="{% url 'investimentos:nova_ordem' %}" class="inline-flex items-center rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-slate-300 transition hover:bg-white/10">Nova Ordem</a>
+      <a href="{% url 'investimentos:novo_rendimento' %}" class="inline-flex items-center rounded-2xl bg-neonprimary px-5 py-3 text-sm font-semibold text-slate-950 transition hover:brightness-110">Novo Rendimento</a>
+      <button id="btnNovoAporte" type="button" class="inline-flex items-center rounded-2xl border border-amber-300/20 bg-amber-400/10 px-4 py-3 text-sm font-medium text-amber-200 transition hover:bg-amber-400/20">Novo Aporte</button>
+    </div>
+  </div>
+
+  <section class="glass-panel mt-6 rounded-[28px] p-6 shadow-2xl shadow-black/10">
+    <form method="GET" class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+      <div>
+        <label for="evento" class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Tipo de Evento</label>
+        <select id="evento" name="evento" class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white outline-none transition focus:border-neonprimary/40">
+          <option value="" {% if not filtros.evento %}selected{% endif %}>Todos</option>
+          <option value="ordem" {% if filtros.evento == 'ordem' %}selected{% endif %}>Compras e Vendas</option>
+          <option value="rendimento" {% if filtros.evento == 'rendimento' %}selected{% endif %}>Rendimentos</option>
+          <option value="aporte" {% if filtros.evento == 'aporte' %}selected{% endif %}>Aportes</option>
+        </select>
+      </div>
+
+      <div>
+        <label for="ativo_id" class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Ativo</label>
+        <select id="ativo_id" name="ativo_id" class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white outline-none transition focus:border-neonprimary/40">
+          <option value="">Todos</option>
+          {% for ativo in ativos %}
+            <option value="{{ ativo.id }}" {% if filtros.ativo_id == ativo.id|stringformat:'s' %}selected{% endif %}>{{ ativo.ticker|default:ativo.nome }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div>
+        <label for="tipo_ordem" class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Tipo de Ordem</label>
+        <select id="tipo_ordem" name="tipo_ordem" class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white outline-none transition focus:border-neonprimary/40">
+          <option value="">Todos</option>
+          <option value="Compra" {% if filtros.tipo_ordem == 'Compra' %}selected{% endif %}>Compra</option>
+          <option value="Venda" {% if filtros.tipo_ordem == 'Venda' %}selected{% endif %}>Venda</option>
+        </select>
+      </div>
+
+      <div>
+        <label for="data_range" class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Data</label>
+        <input id="data_range" name="data_range" type="text" value="{{ filtros.data_range }}" placeholder="Selecione intervalo" class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white outline-none transition focus:border-neonprimary/40" />
+      </div>
+
+      <div>
+        <label for="busca" class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Descrição</label>
+        <input id="busca" name="busca" type="text" value="{{ filtros.busca }}" placeholder="Buscar descrição..." class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white outline-none transition focus:border-neonprimary/40" />
+      </div>
+
+      <div>
+        <label for="per_page" class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Itens por Página</label>
+        <select id="per_page" name="per_page" class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white outline-none transition focus:border-neonprimary/40">
+          <option value="30" {% if filtros.per_page == '30' %}selected{% endif %}>30</option>
+          <option value="50" {% if filtros.per_page == '50' %}selected{% endif %}>50</option>
+          <option value="100" {% if filtros.per_page == '100' %}selected{% endif %}>100</option>
+        </select>
+      </div>
+
+      <div class="md:col-span-2 lg:col-span-3 xl:col-span-6 flex items-end justify-end gap-3">
+        <a href="{% url 'investimentos:historico_investimentos' %}" class="inline-flex items-center rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-slate-300 transition hover:bg-white/10">Limpar</a>
+        <button type="submit" class="inline-flex items-center rounded-2xl bg-neonprimary px-5 py-2 text-sm font-semibold text-slate-950 transition hover:brightness-110">Filtrar</button>
+      </div>
+    </form>
+  </section>
+
+  <section class="glass-panel mt-8 overflow-hidden rounded-[28px] p-6 shadow-2xl shadow-black/10">
+    {% if erro_formulario %}
+      <div class="mb-5 rounded-2xl border border-rose-400/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">{{ erro_formulario }}</div>
+    {% endif %}
+    {% if sucesso_formulario %}
+      <div class="mb-5 rounded-2xl border border-neonprimary/20 bg-neonprimary/10 px-4 py-3 text-sm text-neonprimary">{{ sucesso_formulario }}</div>
+    {% endif %}
+
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-white/10">
+        <thead>
+          <tr class="text-left text-xs uppercase tracking-[0.2em] text-slate-500">
+            <th class="py-3 pr-4">Data</th>
+            <th class="px-4 py-3">Categoria</th>
+            <th class="px-4 py-3">Ativo</th>
+            <th class="px-4 py-3">Detalhes</th>
+            <th class="px-4 py-3 text-right">Valor</th>
+            <th class="px-4 py-3 text-right">Ações</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-white/5 text-sm text-slate-200">
+          {% for item in eventos %}
+            <tr class="transition hover:bg-white/[0.03]">
+              <td class="py-4 pr-4 text-slate-400">{{ item.data|date:"d/m/Y" }}</td>
+              <td class="px-4 py-4">
+                <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold {% if item.categoria == 'Rendimento' %}bg-neonprimary/20 text-neonprimary{% elif item.categoria == 'Aporte' %}bg-amber-400/20 text-amber-200{% else %}bg-sky-500/20 text-sky-200{% endif %}">{{ item.categoria }}</span>
+              </td>
+              <td class="px-4 py-4 text-slate-300">{{ item.ativo_label }}</td>
+              <td class="px-4 py-4 font-medium text-white">
+                {{ item.descricao }}
+                {% if item.categoria == 'Aporte' and item.id_transacao_origem %}
+                  <span class="ml-2 text-xs text-slate-400">Origem #{{ item.id_transacao_origem }}</span>
+                {% endif %}
+              </td>
+              <td class="px-4 py-4 text-right font-semibold {% if item.tipo == 'Compra' %}text-neondanger{% elif item.tipo == 'Venda' or item.tipo == 'Rendimento' or item.tipo == 'Aporte' %}text-neonprimary{% else %}text-white{% endif %}">
+                {% if item.tipo == 'Compra' %}-{% elif item.tipo == 'Venda' or item.tipo == 'Rendimento' or item.tipo == 'Aporte' %}+{% endif %}R$ {{ item.valor|floatformat:2 }}
+              </td>
+              <td class="px-4 py-4 text-right">
+                {% if item.categoria == 'Ordem' %}
+                  <div class="inline-flex items-center gap-2">
+                    <button
+                      type="button"
+                      class="btnEditarOrdem inline-flex rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-slate-200 transition hover:bg-white/10"
+                      data-id="{{ item.id }}"
+                      data-data="{{ item.data|date:'Y-m-d' }}"
+                      data-tipo="{{ item.tipo }}"
+                      data-quantidade="{{ item.quantidade|floatformat:8 }}"
+                      data-preco="{{ item.preco|floatformat:8 }}"
+                      data-taxas="{{ item.taxas|floatformat:2 }}"
+                    >
+                      Editar
+                    </button>
+                    <form method="POST" onsubmit="return confirm('Deseja excluir esta ordem?');" class="inline-flex">
+                      {% csrf_token %}
+                      <input type="hidden" name="acao" value="excluir_ordem" />
+                      <input type="hidden" name="item_id" value="{{ item.id }}" />
+                      <button type="submit" class="inline-flex rounded-xl border border-rose-300/20 bg-rose-500/10 px-3 py-1.5 text-xs font-medium text-rose-200 transition hover:bg-rose-500/20">Excluir</button>
+                    </form>
+                  </div>
+                {% elif item.categoria == 'Rendimento' %}
+                  <div class="inline-flex items-center gap-2">
+                    <button
+                      type="button"
+                      class="btnEditarRendimento inline-flex rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-slate-200 transition hover:bg-white/10"
+                      data-id="{{ item.id }}"
+                      data-data="{{ item.data|date:'Y-m-d' }}"
+                      data-valor="{{ item.valor|floatformat:2 }}"
+                      data-descricao="{{ item.descricao|default:'' }}"
+                    >
+                      Editar
+                    </button>
+                    <form method="POST" onsubmit="return confirm('Deseja excluir este rendimento?');" class="inline-flex">
+                      {% csrf_token %}
+                      <input type="hidden" name="acao" value="excluir_rendimento" />
+                      <input type="hidden" name="item_id" value="{{ item.id }}" />
+                      <button type="submit" class="inline-flex rounded-xl border border-rose-300/20 bg-rose-500/10 px-3 py-1.5 text-xs font-medium text-rose-200 transition hover:bg-rose-500/20">Excluir</button>
+                    </form>
+                  </div>
+                {% else %}
+                  <div class="inline-flex items-center gap-2">
+                    <button
+                      type="button"
+                      class="btnEditarAporte inline-flex rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-slate-200 transition hover:bg-white/10"
+                      data-id="{{ item.id }}"
+                      data-data="{{ item.data|date:'Y-m-d' }}"
+                      data-valor="{{ item.valor|floatformat:2 }}"
+                      data-descricao="{{ item.descricao|default:'' }}"
+                    >
+                      Editar
+                    </button>
+                    <form method="POST" onsubmit="return confirm('Deseja excluir este aporte?');" class="inline-flex">
+                      {% csrf_token %}
+                      <input type="hidden" name="acao" value="excluir_aporte" />
+                      <input type="hidden" name="item_id" value="{{ item.id }}" />
+                      <button type="submit" class="inline-flex rounded-xl border border-rose-300/20 bg-rose-500/10 px-3 py-1.5 text-xs font-medium text-rose-200 transition hover:bg-rose-500/20">Excluir</button>
+                    </form>
+                  </div>
+                {% endif %}
+              </td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="6" class="py-10 text-center text-sm text-slate-500">Nenhuma operação de investimento cadastrada.</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% if eventos.paginator.num_pages > 1 %}
+      <div class="mt-5 flex flex-col gap-3 border-t border-white/10 pt-4 md:flex-row md:items-center md:justify-between">
+        <p class="text-sm text-slate-400">
+          Mostrando {{ eventos.start_index }}-{{ eventos.end_index }} de {{ eventos.paginator.count }} operações
+        </p>
+        <div class="inline-flex items-center gap-2">
+          {% if eventos.has_previous %}
+            <a href="?{{ page_query_prefix }}page={{ eventos.previous_page_number }}" class="inline-flex items-center rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-slate-300 transition hover:bg-white/10">Anterior</a>
+          {% else %}
+            <span class="inline-flex items-center rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-slate-600">Anterior</span>
+          {% endif %}
+
+          <span class="inline-flex items-center rounded-xl border border-neonprimary/40 bg-neonprimary/10 px-3 py-1.5 text-xs font-semibold text-neonprimary">
+            Página {{ eventos.number }} de {{ eventos.paginator.num_pages }}
+          </span>
+
+          {% if eventos.has_next %}
+            <a href="?{{ page_query_prefix }}page={{ eventos.next_page_number }}" class="inline-flex items-center rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-slate-300 transition hover:bg-white/10">Próxima</a>
+          {% else %}
+            <span class="inline-flex items-center rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-slate-600">Próxima</span>
+          {% endif %}
+        </div>
+      </div>
+    {% endif %}
+  </section>
+
+  <div id="backdropEditarOrdem" class="fixed inset-0 z-40 hidden bg-black/60 backdrop-blur-sm"></div>
+  <div id="modalEditarOrdem" class="fixed inset-0 z-50 hidden items-center justify-center p-4">
+    <section class="glass-panel w-full max-w-2xl rounded-[28px] p-6 shadow-2xl shadow-black/20">
+      <div class="mb-6">
+        <h2 class="text-2xl font-bold text-white">Editar Ordem</h2>
+        <p class="mt-1 text-sm text-slate-400">Atualize os dados da compra ou venda selecionada.</p>
+      </div>
+
+      <form method="POST" class="grid grid-cols-1 gap-4 md:grid-cols-2">
+        {% csrf_token %}
+        <input type="hidden" name="acao" value="editar_ordem" />
+        <input type="hidden" id="ordem_item_id" name="item_id" />
+
+        <div>
+          <label class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Data</label>
+          <input id="ordem_data" name="data" type="date" required class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white outline-none transition focus:border-neonprimary/40" />
+        </div>
+        <div>
+          <label class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Tipo</label>
+          <select id="ordem_tipo" name="tipo" required class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white outline-none transition focus:border-neonprimary/40">
+            <option value="Compra">Compra</option>
+            <option value="Venda">Venda</option>
+          </select>
+        </div>
+        <div>
+          <label class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Quantidade</label>
+          <input id="ordem_quantidade" name="quantidade" type="number" step="0.00000001" min="0" required class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white outline-none transition focus:border-neonprimary/40" />
+        </div>
+        <div>
+          <label class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Preço</label>
+          <input id="ordem_preco" name="preco" type="number" step="0.00000001" min="0" required class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white outline-none transition focus:border-neonprimary/40" />
+        </div>
+        <div>
+          <label class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Taxas</label>
+          <input id="ordem_taxas" name="taxas" type="number" step="0.01" min="0" required class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white outline-none transition focus:border-neonprimary/40" />
+        </div>
+
+        <div class="md:col-span-2 flex items-center justify-end gap-3 pt-2">
+          <button type="button" id="btnCancelarEditarOrdem" class="inline-flex items-center rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-slate-300 transition hover:bg-white/10">Cancelar</button>
+          <button type="submit" class="inline-flex items-center rounded-2xl bg-neonprimary px-5 py-2 text-sm font-semibold text-slate-950 transition hover:brightness-110">Salvar Ordem</button>
+        </div>
+      </form>
+    </section>
+  </div>
+
+  <div id="backdropEditarRendimento" class="fixed inset-0 z-40 hidden bg-black/60 backdrop-blur-sm"></div>
+  <div id="modalEditarRendimento" class="fixed inset-0 z-50 hidden items-center justify-center p-4">
+    <section class="glass-panel w-full max-w-2xl rounded-[28px] p-6 shadow-2xl shadow-black/20">
+      <div class="mb-6">
+        <h2 class="text-2xl font-bold text-white">Editar Rendimento</h2>
+        <p class="mt-1 text-sm text-slate-400">Atualize os dados do rendimento selecionado.</p>
+      </div>
+
+      <form method="POST" class="grid grid-cols-1 gap-4 md:grid-cols-2">
+        {% csrf_token %}
+        <input type="hidden" name="acao" value="editar_rendimento" />
+        <input type="hidden" id="rendimento_item_id" name="item_id" />
+
+        <div>
+          <label class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Data</label>
+          <input id="rendimento_data" name="data" type="date" required class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white outline-none transition focus:border-neonprimary/40" />
+        </div>
+        <div>
+          <label class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Valor</label>
+          <input id="rendimento_valor" name="valor" type="number" step="0.01" min="0" required class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white outline-none transition focus:border-neonprimary/40" />
+        </div>
+        <div class="md:col-span-2">
+          <label class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Descrição</label>
+          <input id="rendimento_descricao" name="descricao" type="text" class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white outline-none transition focus:border-neonprimary/40" />
+        </div>
+
+        <div class="md:col-span-2 flex items-center justify-end gap-3 pt-2">
+          <button type="button" id="btnCancelarEditarRendimento" class="inline-flex items-center rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-slate-300 transition hover:bg-white/10">Cancelar</button>
+          <button type="submit" class="inline-flex items-center rounded-2xl bg-neonprimary px-5 py-2 text-sm font-semibold text-slate-950 transition hover:brightness-110">Salvar Rendimento</button>
+        </div>
+      </form>
+    </section>
+  </div>
+
+  <div id="backdropNovoAporte" class="fixed inset-0 z-40 hidden bg-black/60 backdrop-blur-sm"></div>
+  <div id="modalNovoAporte" class="fixed inset-0 z-50 hidden items-center justify-center p-4">
+    <section class="glass-panel w-full max-w-2xl rounded-[28px] p-6 shadow-2xl shadow-black/20">
+      <div class="mb-6">
+        <h2 class="text-2xl font-bold text-white">Novo Aporte Manual</h2>
+        <p class="mt-1 text-sm text-slate-400">Registre um aporte patrimonial manualmente.</p>
+      </div>
+
+      <form method="POST" class="grid grid-cols-1 gap-4 md:grid-cols-2">
+        {% csrf_token %}
+        <input type="hidden" name="acao" value="criar_aporte" />
+
+        <div>
+          <label class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Data</label>
+          <input name="data" type="date" value="{{ hoje|date:'Y-m-d' }}" class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white outline-none transition focus:border-neonprimary/40" />
+        </div>
+        <div>
+          <label class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Valor</label>
+          <input name="valor" type="number" step="0.01" min="0" required class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white outline-none transition focus:border-neonprimary/40" />
+        </div>
+        <div class="md:col-span-2">
+          <label class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Descrição</label>
+          <input name="descricao" type="text" placeholder="Aporte via Orçamento" class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white outline-none transition focus:border-neonprimary/40" />
+        </div>
+
+        <div class="md:col-span-2 flex items-center justify-end gap-3 pt-2">
+          <button type="button" id="btnCancelarNovoAporte" class="inline-flex items-center rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-slate-300 transition hover:bg-white/10">Cancelar</button>
+          <button type="submit" class="inline-flex items-center rounded-2xl bg-amber-300 px-5 py-2 text-sm font-semibold text-slate-950 transition hover:brightness-110">Salvar Aporte</button>
+        </div>
+      </form>
+    </section>
+  </div>
+
+  <div id="backdropEditarAporte" class="fixed inset-0 z-40 hidden bg-black/60 backdrop-blur-sm"></div>
+  <div id="modalEditarAporte" class="fixed inset-0 z-50 hidden items-center justify-center p-4">
+    <section class="glass-panel w-full max-w-2xl rounded-[28px] p-6 shadow-2xl shadow-black/20">
+      <div class="mb-6">
+        <h2 class="text-2xl font-bold text-white">Editar Aporte</h2>
+        <p class="mt-1 text-sm text-slate-400">Atualize os dados do aporte patrimonial.</p>
+      </div>
+
+      <form method="POST" class="grid grid-cols-1 gap-4 md:grid-cols-2">
+        {% csrf_token %}
+        <input type="hidden" name="acao" value="editar_aporte" />
+        <input type="hidden" id="aporte_item_id" name="item_id" />
+
+        <div>
+          <label class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Data</label>
+          <input id="aporte_data" name="data" type="date" required class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white outline-none transition focus:border-neonprimary/40" />
+        </div>
+        <div>
+          <label class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Valor</label>
+          <input id="aporte_valor" name="valor" type="number" step="0.01" min="0" required class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white outline-none transition focus:border-neonprimary/40" />
+        </div>
+        <div class="md:col-span-2">
+          <label class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Descrição</label>
+          <input id="aporte_descricao" name="descricao" type="text" class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white outline-none transition focus:border-neonprimary/40" />
+        </div>
+
+        <div class="md:col-span-2 flex items-center justify-end gap-3 pt-2">
+          <button type="button" id="btnCancelarEditarAporte" class="inline-flex items-center rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-slate-300 transition hover:bg-white/10">Cancelar</button>
+          <button type="submit" class="inline-flex items-center rounded-2xl bg-amber-300 px-5 py-2 text-sm font-semibold text-slate-950 transition hover:brightness-110">Salvar Aporte</button>
+        </div>
+      </form>
+    </section>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/pt.js"></script>
+<script>
+  (function () {
+    const inputData = document.getElementById('data_range');
+    if (inputData && window.flatpickr) {
+      flatpickr(inputData, {
+        mode: 'range',
+        dateFormat: 'Y-m-d',
+        locale: 'pt',
+        rangeSeparator: ' até ',
+        allowInput: true,
+      });
+    }
+
+    const modalOrdem = document.getElementById('modalEditarOrdem');
+    const backdropOrdem = document.getElementById('backdropEditarOrdem');
+    const btnsEditarOrdem = document.querySelectorAll('.btnEditarOrdem');
+    const btnCancelarOrdem = document.getElementById('btnCancelarEditarOrdem');
+
+    const modalRendimento = document.getElementById('modalEditarRendimento');
+    const backdropRendimento = document.getElementById('backdropEditarRendimento');
+    const btnsEditarRendimento = document.querySelectorAll('.btnEditarRendimento');
+    const btnCancelarRendimento = document.getElementById('btnCancelarEditarRendimento');
+
+    const modalNovoAporte = document.getElementById('modalNovoAporte');
+    const backdropNovoAporte = document.getElementById('backdropNovoAporte');
+    const btnNovoAporte = document.getElementById('btnNovoAporte');
+    const btnCancelarNovoAporte = document.getElementById('btnCancelarNovoAporte');
+
+    const modalEditarAporte = document.getElementById('modalEditarAporte');
+    const backdropEditarAporte = document.getElementById('backdropEditarAporte');
+    const btnsEditarAporte = document.querySelectorAll('.btnEditarAporte');
+    const btnCancelarEditarAporte = document.getElementById('btnCancelarEditarAporte');
+
+    function abrirModalOrdem(btn) {
+      document.getElementById('ordem_item_id').value = btn.dataset.id || '';
+      document.getElementById('ordem_data').value = btn.dataset.data || '';
+      document.getElementById('ordem_tipo').value = btn.dataset.tipo || 'Compra';
+      document.getElementById('ordem_quantidade').value = btn.dataset.quantidade || '0';
+      document.getElementById('ordem_preco').value = btn.dataset.preco || '0';
+      document.getElementById('ordem_taxas').value = btn.dataset.taxas || '0';
+
+      modalOrdem.classList.remove('hidden');
+      modalOrdem.classList.add('flex');
+      backdropOrdem.classList.remove('hidden');
+      document.body.classList.add('overflow-hidden');
+    }
+
+    function fecharModalOrdem() {
+      modalOrdem.classList.add('hidden');
+      modalOrdem.classList.remove('flex');
+      backdropOrdem.classList.add('hidden');
+      document.body.classList.remove('overflow-hidden');
+    }
+
+    function abrirModalRendimento(btn) {
+      document.getElementById('rendimento_item_id').value = btn.dataset.id || '';
+      document.getElementById('rendimento_data').value = btn.dataset.data || '';
+      document.getElementById('rendimento_valor').value = btn.dataset.valor || '0';
+      document.getElementById('rendimento_descricao').value = btn.dataset.descricao || '';
+
+      modalRendimento.classList.remove('hidden');
+      modalRendimento.classList.add('flex');
+      backdropRendimento.classList.remove('hidden');
+      document.body.classList.add('overflow-hidden');
+    }
+
+    function fecharModalRendimento() {
+      modalRendimento.classList.add('hidden');
+      modalRendimento.classList.remove('flex');
+      backdropRendimento.classList.add('hidden');
+      document.body.classList.remove('overflow-hidden');
+    }
+
+    function abrirModalNovoAporte() {
+      modalNovoAporte.classList.remove('hidden');
+      modalNovoAporte.classList.add('flex');
+      backdropNovoAporte.classList.remove('hidden');
+      document.body.classList.add('overflow-hidden');
+    }
+
+    function fecharModalNovoAporte() {
+      modalNovoAporte.classList.add('hidden');
+      modalNovoAporte.classList.remove('flex');
+      backdropNovoAporte.classList.add('hidden');
+      document.body.classList.remove('overflow-hidden');
+    }
+
+    function abrirModalEditarAporte(btn) {
+      document.getElementById('aporte_item_id').value = btn.dataset.id || '';
+      document.getElementById('aporte_data').value = btn.dataset.data || '';
+      document.getElementById('aporte_valor').value = btn.dataset.valor || '0';
+      document.getElementById('aporte_descricao').value = btn.dataset.descricao || '';
+
+      modalEditarAporte.classList.remove('hidden');
+      modalEditarAporte.classList.add('flex');
+      backdropEditarAporte.classList.remove('hidden');
+      document.body.classList.add('overflow-hidden');
+    }
+
+    function fecharModalEditarAporte() {
+      modalEditarAporte.classList.add('hidden');
+      modalEditarAporte.classList.remove('flex');
+      backdropEditarAporte.classList.add('hidden');
+      document.body.classList.remove('overflow-hidden');
+    }
+
+    btnsEditarOrdem.forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        abrirModalOrdem(btn);
+      });
+    });
+
+    btnsEditarRendimento.forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        abrirModalRendimento(btn);
+      });
+    });
+
+    btnsEditarAporte.forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        abrirModalEditarAporte(btn);
+      });
+    });
+
+    if (btnCancelarOrdem) btnCancelarOrdem.addEventListener('click', fecharModalOrdem);
+    if (backdropOrdem) backdropOrdem.addEventListener('click', fecharModalOrdem);
+    if (btnCancelarRendimento) btnCancelarRendimento.addEventListener('click', fecharModalRendimento);
+    if (backdropRendimento) backdropRendimento.addEventListener('click', fecharModalRendimento);
+    if (btnNovoAporte) btnNovoAporte.addEventListener('click', abrirModalNovoAporte);
+    if (btnCancelarNovoAporte) btnCancelarNovoAporte.addEventListener('click', fecharModalNovoAporte);
+    if (backdropNovoAporte) backdropNovoAporte.addEventListener('click', fecharModalNovoAporte);
+    if (btnCancelarEditarAporte) btnCancelarEditarAporte.addEventListener('click', fecharModalEditarAporte);
+    if (backdropEditarAporte) backdropEditarAporte.addEventListener('click', fecharModalEditarAporte);
+
+    document.addEventListener('keydown', function (event) {
+      if (event.key === 'Escape') {
+        fecharModalOrdem();
+        fecharModalRendimento();
+        fecharModalNovoAporte();
+        fecharModalEditarAporte();
+      }
+    });
+  })();
+</script>
+{% endblock %}

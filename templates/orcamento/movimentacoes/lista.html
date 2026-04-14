@@ -13,7 +13,7 @@
       <a href="{% url 'orcamento:nova_movimentacao_orcamento' %}" class="inline-flex items-center rounded-2xl bg-neonprimary px-5 py-2.5 text-sm font-semibold text-slate-950 transition hover:brightness-110">Nova Movimentação</a>
     </div>
 
-    <form method="GET" class="mb-5 grid grid-cols-1 gap-3 md:grid-cols-[1fr_180px_180px_auto] md:items-end">
+    <form method="GET" class="mb-5 grid grid-cols-1 gap-3 md:grid-cols-[1fr_170px_170px_170px_auto] md:items-end">
       <div>
         <label class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Busca</label>
         <input type="text" name="q" value="{{ query }}" placeholder="Descrição ou plano de conta" class="w-full rounded-xl border border-white/10 bg-darkbg px-3 py-2 text-sm text-white outline-none transition focus:border-neonprimary/40" />
@@ -33,6 +33,15 @@
           <option value="">Todas</option>
           {% for valor, label in frequencias %}
             <option value="{{ valor }}" {% if frequencia == valor %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Mês (Anuais)</label>
+        <select name="mes_referencia" class="w-full rounded-xl border border-white/10 bg-darkbg px-3 py-2 text-sm text-white outline-none transition focus:border-neonprimary/40">
+          <option value="">Todos</option>
+          {% for mes, sigla in meses_ano %}
+            <option value="{{ mes }}" {% if mes_referencia == mes|stringformat:'s' %}selected{% endif %}>{{ sigla }}</option>
           {% endfor %}
         </select>
       </div>
@@ -74,6 +83,19 @@
               </td>
               <td class="px-4 py-3 text-right text-sm">
                 <div class="inline-flex items-center gap-2">
+                  <button
+                    type="button"
+                    class="btnAbrirModalLancar inline-flex rounded-xl border border-neonprimary/20 bg-neonprimary/10 px-3 py-1.5 text-xs font-medium text-neonprimary transition hover:bg-neonprimary/20"
+                    data-url="{% url 'orcamento:lancar_movimentacao_orcamento_futuro' item.id %}"
+                    data-descricao="{{ item.descricao|default:'Sem descricao'|escape }}"
+                    data-tipo="{{ item.get_tipo_display|escape }}"
+                    data-valor="{{ item.valor|floatformat:2 }}"
+                    data-plano="{{ item.plano_conta.codigo }} - {{ item.plano_conta.nome|escape }}"
+                    data-conta="{{ item.conta_bancaria.nome|escape }}"
+                    data-data-vencimento="{{ item.data_sugerida_vencimento }}"
+                  >
+                    Lançar
+                  </button>
                   <a href="{% url 'orcamento:editar_movimentacao_orcamento' item.id %}" class="inline-flex rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-slate-200 transition hover:bg-white/10">Editar</a>
                   <form method="POST" action="{% url 'orcamento:excluir_movimentacao_orcamento' item.id %}" class="inline">
                     {% csrf_token %}
@@ -92,4 +114,112 @@
     </div>
   </section>
 </div>
+
+<div id="modalLancarBackdrop" class="fixed inset-0 z-40 hidden bg-black/60 backdrop-blur-sm"></div>
+<div id="modalLancar" class="fixed inset-0 z-50 hidden items-center justify-center p-4">
+  <article class="glass-panel w-full max-w-xl rounded-[28px] border border-white/10 p-6 shadow-2xl shadow-black/40">
+    <p class="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Lançamento Futuro</p>
+    <h3 class="mt-2 text-xl font-bold text-white">Lançar a partir do orçamento</h3>
+    <p class="mt-3 text-sm text-slate-300">Revise os dados antes de gerar a cópia em lançamentos futuros.</p>
+
+    <div class="mt-4 grid grid-cols-1 gap-2 rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-200">
+      <p><span class="text-slate-400">Descrição:</span> <span id="resumoLancarDescricao">-</span></p>
+      <p><span class="text-slate-400">Tipo:</span> <span id="resumoLancarTipo">-</span></p>
+      <p><span class="text-slate-400">Plano:</span> <span id="resumoLancarPlano">-</span></p>
+      <p><span class="text-slate-400">Conta:</span> <span id="resumoLancarConta">-</span></p>
+      <p><span class="text-slate-400">Valor:</span> R$ <span id="resumoLancarValor">0,00</span></p>
+    </div>
+
+    <form id="formLancar" method="POST" action="" class="mt-5 space-y-4">
+      {% csrf_token %}
+      <input type="hidden" name="next" value="{{ request.get_full_path }}" />
+      <div>
+        <label for="data_vencimento_lancar" class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Data de vencimento</label>
+        <input id="data_vencimento_lancar" name="data_vencimento" type="date" class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white outline-none transition focus:border-neonprimary/40" required />
+      </div>
+
+      <div>
+        <label for="formato_pagamento_lancar" class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Formato de pagamento</label>
+        <select id="formato_pagamento_lancar" name="formato_pagamento" class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white outline-none transition focus:border-neonprimary/40">
+          {% for value, label in formatos_pagamento %}
+            <option value="{{ value }}" {% if value == 'PIX' %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="flex items-center justify-end gap-3">
+        <button id="cancelarLancar" type="button" class="inline-flex items-center rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-slate-300 transition hover:bg-white/10">Cancelar</button>
+        <button type="submit" class="inline-flex items-center rounded-2xl bg-neonprimary px-5 py-2.5 text-sm font-semibold text-slate-950 transition hover:brightness-110">Confirmar Lançamento</button>
+      </div>
+    </form>
+  </article>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  (function () {
+    const modal = document.getElementById('modalLancar');
+    const backdrop = document.getElementById('modalLancarBackdrop');
+    const form = document.getElementById('formLancar');
+    const inputDataVencimento = document.getElementById('data_vencimento_lancar');
+    const btnCancelar = document.getElementById('cancelarLancar');
+    const botoesAbrir = Array.from(document.querySelectorAll('.btnAbrirModalLancar'));
+
+    const resumoDescricao = document.getElementById('resumoLancarDescricao');
+    const resumoTipo = document.getElementById('resumoLancarTipo');
+    const resumoPlano = document.getElementById('resumoLancarPlano');
+    const resumoConta = document.getElementById('resumoLancarConta');
+    const resumoValor = document.getElementById('resumoLancarValor');
+
+    function abrirModal(btn) {
+      if (!modal || !backdrop || !form) {
+        return;
+      }
+      form.action = btn.getAttribute('data-url') || '';
+      if (inputDataVencimento) {
+        inputDataVencimento.value = btn.getAttribute('data-data-vencimento') || '';
+      }
+
+      if (resumoDescricao) resumoDescricao.textContent = btn.getAttribute('data-descricao') || '-';
+      if (resumoTipo) resumoTipo.textContent = btn.getAttribute('data-tipo') || '-';
+      if (resumoPlano) resumoPlano.textContent = btn.getAttribute('data-plano') || '-';
+      if (resumoConta) resumoConta.textContent = btn.getAttribute('data-conta') || '-';
+      if (resumoValor) resumoValor.textContent = btn.getAttribute('data-valor') || '0,00';
+
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+      backdrop.classList.remove('hidden');
+      document.body.classList.add('overflow-hidden');
+    }
+
+    function fecharModal() {
+      if (!modal || !backdrop) {
+        return;
+      }
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+      backdrop.classList.add('hidden');
+      document.body.classList.remove('overflow-hidden');
+    }
+
+    botoesAbrir.forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        abrirModal(btn);
+      });
+    });
+
+    if (btnCancelar) {
+      btnCancelar.addEventListener('click', fecharModal);
+    }
+    if (backdrop) {
+      backdrop.addEventListener('click', fecharModal);
+    }
+    document.addEventListener('keydown', function (event) {
+      if (event.key === 'Escape') {
+        fecharModal();
+      }
+    });
+  })();
+</script>
 {% endblock %}

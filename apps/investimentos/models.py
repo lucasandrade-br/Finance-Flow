@@ -1,4 +1,5 @@
 from django.db import models
+from decimal import Decimal
 from apps.core.models import ModeloBase
 
 
@@ -11,7 +12,11 @@ class Ativo(ModeloBase):
 
     nome = models.CharField(max_length=150)
     ticker = models.CharField(max_length=20, null=True, blank=True, unique=True)
+    setor = models.CharField(max_length=80, blank=True, default='')
     tipo = models.CharField(max_length=10, choices=Tipo.choices)
+    quantidade_atual = models.DecimalField(max_digits=18, decimal_places=8, default=0)
+    preco_medio = models.DecimalField(max_digits=18, decimal_places=8, default=0)
+    percentual_alvo = models.DecimalField(max_digits=5, decimal_places=2, default=0)
 
     class Meta:
         verbose_name = 'Ativo'
@@ -46,6 +51,13 @@ class Ordem(ModeloBase):
 
     def __str__(self):
         return f'{self.get_tipo_display()} {self.quantidade} x {self.ativo} @ R$ {self.preco}'
+
+    @classmethod
+    def total_compras(cls):
+        total = Decimal('0.00')
+        for ordem in cls.objects.filter(tipo=cls.TipoOrdem.COMPRA):
+            total += ordem.total
+        return total.quantize(Decimal('0.01'))
 
 
 class Rendimento(ModeloBase):
@@ -112,3 +124,28 @@ class MetaParcelaMensal(ModeloBase):
 
     def __str__(self):
         return f'{self.meta.nome} - {self.competencia:%m/%Y}'
+
+
+class AportePatrimonial(ModeloBase):
+    data = models.DateTimeField(auto_now_add=True)
+    valor = models.DecimalField(max_digits=12, decimal_places=2)
+    descricao = models.CharField(max_length=255, default='Aporte via Orçamento')
+    id_transacao_origem = models.IntegerField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = 'Aporte Patrimonial'
+        verbose_name_plural = 'Aportes Patrimoniais'
+        ordering = ['-data', '-created_at']
+
+    def __str__(self):
+        return f'{self.descricao} | R$ {self.valor} em {self.data:%d/%m/%Y %H:%M}'
+
+    @classmethod
+    def saldo_disponivel(cls):
+        total_aportes = Decimal('0.00')
+        for aporte in cls.objects.all():
+            total_aportes += Decimal(aporte.valor or 0)
+
+        total_compras = Ordem.total_compras()
+        saldo = total_aportes - total_compras
+        return saldo.quantize(Decimal('0.01'))

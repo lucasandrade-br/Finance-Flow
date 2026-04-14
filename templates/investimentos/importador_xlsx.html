@@ -1,0 +1,89 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Importador XLSX - Investimentos{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-6xl space-y-6">
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <p class="text-xs font-semibold uppercase tracking-[0.28em] text-slate-500">Investimentos</p>
+      <h1 class="mt-2 text-3xl font-bold tracking-tight text-white">Importador XLSX</h1>
+      <p class="mt-2 text-sm text-slate-400">Importe compras, vendas e rendimentos em lote a partir de uma planilha .xlsx.</p>
+    </div>
+    <div class="inline-flex items-center gap-2">
+      <a href="{% url 'investimentos:baixar_modelo_importacao_xlsx' %}" class="inline-flex items-center rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-slate-300 transition hover:bg-white/10">Baixar Modelo</a>
+      <a href="{% url 'investimentos:historico_investimentos' %}" class="inline-flex items-center rounded-2xl bg-neonprimary px-4 py-2 text-sm font-semibold text-slate-950 transition hover:brightness-110">Voltar ao Histórico</a>
+    </div>
+  </div>
+
+  <section class="glass-panel rounded-[28px] p-6 shadow-2xl shadow-black/10">
+    {% if erro_formulario %}
+      <div class="mb-5 rounded-2xl border border-rose-400/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">{{ erro_formulario }}</div>
+    {% endif %}
+    {% if sucesso_formulario %}
+      <div class="mb-5 rounded-2xl border border-neonprimary/20 bg-neonprimary/10 px-4 py-3 text-sm text-neonprimary">{{ sucesso_formulario }}</div>
+    {% endif %}
+
+    <form method="POST" enctype="multipart/form-data" class="space-y-5">
+      {% csrf_token %}
+      <div>
+        <label for="arquivo_xlsx" class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Arquivo .XLSX</label>
+        <input id="arquivo_xlsx" name="arquivo_xlsx" type="file" accept=".xlsx" required class="w-full rounded-2xl border border-white/10 bg-darkbg px-4 py-3 text-sm text-white outline-none transition file:mr-3 file:rounded-lg file:border-0 file:bg-neonprimary/20 file:px-3 file:py-1 file:text-xs file:font-medium file:text-neonprimary file:cursor-pointer hover:border-white/20 focus:border-neonprimary/40" />
+      </div>
+      <div class="flex items-center justify-end gap-3">
+        <button type="submit" class="inline-flex items-center rounded-2xl bg-neonprimary px-5 py-2 text-sm font-semibold text-slate-950 transition hover:brightness-110">Importar Planilha</button>
+      </div>
+    </form>
+  </section>
+
+  <section class="glass-panel rounded-[28px] p-6 shadow-2xl shadow-black/10">
+    <h2 class="text-lg font-semibold text-white">Layout Esperado da Planilha</h2>
+    <p class="mt-2 text-sm text-slate-400">Use o modelo para manter a estrutura de colunas. Tipos aceitos em tipo_registro: Compra, Venda, Rendimento.</p>
+
+    <div class="mt-4 overflow-x-auto rounded-2xl border border-white/10">
+      <table class="min-w-full divide-y divide-white/10">
+        <thead class="bg-white/5">
+          <tr>
+            <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">tipo_registro</th>
+            <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">ticker</th>
+            <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">nome_ativo</th>
+            <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">tipo_ativo</th>
+            <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">tipo_ordem</th>
+            <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">quantidade</th>
+            <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">preco</th>
+            <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">taxas</th>
+            <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">valor_rendimento</th>
+            <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">data</th>
+            <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">descricao</th>
+            <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">resgatar_para_orcamento</th>
+          </tr>
+        </thead>
+      </table>
+    </div>
+  </section>
+
+  {% if linhas_com_erro %}
+    <section class="glass-panel rounded-[28px] p-6 shadow-2xl shadow-black/10">
+      <h2 class="text-lg font-semibold text-white">Erros Encontrados</h2>
+      <div class="mt-4 overflow-x-auto rounded-2xl border border-white/10">
+        <table class="min-w-full divide-y divide-white/10">
+          <thead class="bg-white/5">
+            <tr>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Linha</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Erro</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-white/5 bg-black/10">
+            {% for item in linhas_com_erro %}
+              <tr>
+                <td class="px-4 py-3 text-sm text-slate-200">{{ item.linha }}</td>
+                <td class="px-4 py-3 text-sm text-rose-200">{{ item.erro }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  {% endif %}
+</div>
+{% endblock %}

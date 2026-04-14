@@ -130,11 +130,15 @@
   $(document).ready(function () {
     const $tipo = $('#tipo');
     const $planoConta = $('#plano_conta_id');
+    const wrapperSincronizar = document.getElementById('sincronizarInvestimentoWrapper');
+    const inputSincronizar = document.getElementById('sincronizar_investimento');
     const opcoesPlanoOriginais = Array.from(document.querySelectorAll('#plano_conta_id option')).map(function (option) {
       return {
         value: option.value,
         text: option.textContent,
         tipo: option.dataset.tipo || '',
+        codigo: option.dataset.codigo || '',
+        nome: option.dataset.nome || '',
       };
     });
 
@@ -184,13 +188,35 @@
 
       opcoesFiltradas.forEach(function (opcao) {
         const deveSelecionar = String(opcao.value) === String(valorAtual);
-        $planoConta.append(new Option(opcao.text, opcao.value, deveSelecionar, deveSelecionar));
+        const optionEl = new Option(opcao.text, opcao.value, deveSelecionar, deveSelecionar);
+        optionEl.dataset.tipo = opcao.tipo || '';
+        optionEl.dataset.codigo = opcao.codigo || '';
+        optionEl.dataset.nome = opcao.nome || '';
+        $planoConta.append(optionEl);
       });
 
       if (!$planoConta.val()) {
         $planoConta.val(opcoesFiltradas[0].value);
       }
       $planoConta.trigger('change.select2');
+    }
+
+    function alternarSincronizacaoPatrimonial() {
+      if (!wrapperSincronizar || !inputSincronizar) {
+        return;
+      }
+      const tipoAtual = $tipo.val();
+      const selecionado = $planoConta.find('option:selected');
+      const codigo = (selecionado.attr('data-codigo') || '').toString().trim();
+      const nome = (selecionado.attr('data-nome') || '').toString().trim().toLowerCase();
+      const mostrar = tipoAtual === 'Investimento' && codigo === '3.1.1' && nome.indexOf('renda') !== -1;
+
+      if (mostrar) {
+        wrapperSincronizar.classList.remove('hidden');
+      } else {
+        wrapperSincronizar.classList.add('hidden');
+        inputSincronizar.checked = false;
+      }
     }
 
     function sincronizarPlanoContaComTag(dataTag) {
@@ -250,9 +276,12 @@
       alternarContaDestino();
       filtrarPlanoContaPorTipo();
       $('#tagsSelect2').val(null).trigger('change');
+      alternarSincronizacaoPatrimonial();
     });
+    $planoConta.on('change', alternarSincronizacaoPatrimonial);
     alternarContaDestino();
     filtrarPlanoContaPorTipo();
+    alternarSincronizacaoPatrimonial();
 
     const inputVisual = document.getElementById('valor_visual');
     const inputReal = document.getElementById('valor_real');

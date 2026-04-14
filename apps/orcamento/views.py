@@ -1,17 +1,20 @@
+from calendar import monthrange
+from datetime import date, timedelta
+
 from django.db.models import Q, Sum
 from django.db.models.functions import Coalesce, ExtractMonth, ExtractYear
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.dateparse import parse_date
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 from decimal import Decimal
-from datetime import timedelta
 
 from apps.contas.models import ContaBancaria, PlanoConta, Tag
 from apps.orcamento.models import Ciclo, MacroOrcamento, MovimentacaoOrcamento
 from apps.orcamento.services import injetar_movimentacoes_no_ciclo
-from apps.transacoes.models import Movimentacao
+from apps.transacoes.models import FormatoPagamento, Frequencia, LancamentoFuturo, Movimentacao
 
 
 MESES_ANO = [
@@ -236,6 +239,18 @@ def _parse_decimal_ptbr(value):
 	texto = (value or '').strip()
 	if not texto:
 		return None
+
+
+def _sugerir_data_vencimento_orcamento(registro, ano_atual):
+	if (
+		registro.frequencia == MovimentacaoOrcamento.Frequencia.ANUAL
+		and registro.mes_referencia
+		and registro.dia_referencia
+	):
+		dia_maximo = monthrange(ano_atual, registro.mes_referencia)[1]
+		dia = min(registro.dia_referencia, dia_maximo)
+		return date(ano_atual, registro.mes_referencia, dia)
+	return timezone.localdate()
 	if ',' in texto and '.' in texto:
 		texto = texto.replace('.', '').replace(',', '.')
 	elif ',' in texto:
@@ -301,6 +316,7 @@ def _salvar_movimentacao_orcamento(request, registro=None):
 def lista_movimentacoes_orcamento(request):
 	tipo = (request.GET.get('tipo') or '').strip()
 	frequencia = (request.GET.get('frequencia') or '').strip()
+	mes_referencia = (request.GET.get('mes_referencia') or '').strip()
 	query = (request.GET.get('q') or '').strip()
 
 	registros = MovimentacaoOrcamento.objects.select_related(
@@ -312,8 +328,33 @@ def lista_movimentacoes_orcamento(request):
 		registros = registros.filter(tipo=tipo)
 	if frequencia:
 		registros = registros.filter(frequencia=frequencia)
+	if mes_referencia:
+		try:
+			mes_referencia_int = int(mes_referencia)
+			if 1 <= mes_referencia_int <= 12:
+				# Regra solicitada: filtro por mes referencia retorna apenas registros anuais daquele mes.
+				registros = registros.filter(
+					frequencia=MovimentacaoOrcamento.Frequencia.ANUAL,
+					mes_referencia=mes_referencia_int,
+				)
+				frequencia = MovimentacaoOrcamento.Frequencia.ANUAL
+			else:
+				mes_referencia = ''
+		except (TypeError, ValueError):
+			mes_referencia = ''
 	if query:
 		registros = registros.filter(Q(descricao__icontains=query) | Q(plano_conta__nome__icontains=query) | Q(plano_conta__codigo__icontains=query))
+
+	registros = list(registros)
+	ano_atual = timezone.localdate().year
+	for item in registros:
+		data_sugerida = _sugerir_data_vencimento_orcamento(item, ano_atual)
+		item.data_sugerida_vencimento = data_sugerida.strftime('%Y-%m-%d')
+		item.frequencia_futuro_sugerida = (
+			Frequencia.ANUAL
+			if item.frequencia == MovimentacaoOrcamento.Frequencia.ANUAL
+			else Frequencia.VARIAVEL
+		)
 
 	return render(
 		request,
@@ -322,11 +363,51 @@ def lista_movimentacoes_orcamento(request):
 			'registros': registros,
 			'tipo': tipo,
 			'frequencia': frequencia,
+			'mes_referencia': mes_referencia,
 			'query': query,
 			'tipos_transacao': MovimentacaoOrcamento.Tipo.choices,
 			'frequencias': MovimentacaoOrcamento.Frequencia.choices,
+			'meses_ano': MESES_ANO,
+			'formatos_pagamento': FormatoPagamento.choices,
 		},
 	)
+
+
+@require_http_methods(["POST"])
+def lancar_movimentacao_orcamento_futuro(request, registro_id):
+	registro = get_object_or_404(MovimentacaoOrcamento, pk=registro_id)
+	next_url = request.POST.get('next') or request.GET.get('next')
+	if next_url and not url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}):
+		next_url = None
+
+	data_vencimento = parse_date(request.POST.get('data_vencimento') or '')
+	formato_pagamento = (request.POST.get('formato_pagamento') or '').strip()
+	if formato_pagamento not in {item[0] for item in FormatoPagamento.choices}:
+		formato_pagamento = FormatoPagamento.PIX
+
+	if not data_vencimento:
+		data_vencimento = _sugerir_data_vencimento_orcamento(registro, timezone.localdate().year)
+
+	frequencia_futuro = (
+		Frequencia.ANUAL
+		if registro.frequencia == MovimentacaoOrcamento.Frequencia.ANUAL
+		else Frequencia.VARIAVEL
+	)
+
+	futuro = LancamentoFuturo.objects.create(
+		descricao=registro.descricao,
+		tipo=registro.tipo,
+		plano_conta_id=registro.plano_conta_id,
+		conta_bancaria_id=registro.conta_bancaria_id,
+		formato_pagamento=formato_pagamento,
+		frequencia=frequencia_futuro,
+		data_vencimento=data_vencimento,
+		valor=registro.valor,
+		status=LancamentoFuturo.Status.PENDENTE,
+	)
+	futuro.tags.set(registro.tags.all())
+
+	return redirect(next_url or 'orcamento:lista_movimentacoes_orcamento')
 
 
 @require_http_methods(["GET", "POST"])
@@ -691,12 +772,14 @@ def cockpit_ciclo(request):
 		total_entradas=Sum('valor', filter=Q(tipo='Receita')),
 		total_despesas=Sum('valor', filter=Q(tipo='Despesa')),
 		total_investimentos=Sum('valor', filter=Q(tipo='Investimento')),
-		total_transferencias=Sum('valor', filter=Q(tipo__in=['Transferencia', 'TransfEntrada', 'TransfSaida'])),
+		total_transferencias=Sum('valor', filter=Q(tipo__in=['Transferencia', 'TransfEntrada'])),
+		total_transferencias_saida=Sum('valor', filter=Q(tipo='TransfSaida')),
 	)
 	total_entradas = totais_ciclo['total_entradas'] or 0
 	total_despesas = totais_ciclo['total_despesas'] or 0
 	total_investimentos = totais_ciclo['total_investimentos'] or 0
 	total_transferencias = totais_ciclo['total_transferencias'] or 0
+	total_transferencias_saida = totais_ciclo['total_transferencias_saida'] or 0
 
 	movimentacoes_realizadas = movimentacoes_ciclo.annotate(
 		data_referencia=Coalesce('data_pagamento', 'data_vencimento')
@@ -777,6 +860,7 @@ def cockpit_ciclo(request):
 		total_entradas
 		- total_despesas
 		- total_investimentos
+		- total_transferencias_saida
 	)
 
 	pendentes_count = movimentacoes_ciclo.filter(status=Movimentacao.Status.PENDENTE).count()
@@ -806,6 +890,7 @@ def cockpit_ciclo(request):
 			'total_despesas': total_despesas,
 			'total_investimentos': total_investimentos,
 			'total_transferencias': total_transferencias,
+			'total_transferencias_saida': total_transferencias_saida,
 			'saldo_atual': saldo_atual,
 			'saldo_final_previsto': saldo_final_previsto,
 			'total_transferencias_realizadas': total_transferencias_realizadas,
@@ -926,6 +1011,7 @@ def encerrar_ciclo(request):
 		total_investimentos=Sum('valor', filter=Q(tipo='Investimento')),
 		total_transferencias_saida=Sum('valor', filter=Q(tipo='TransfSaida')),
 	)
+
 	saldo_final_previsto = (
 		(totais_ciclo['total_entradas'] or 0)
 		- (totais_ciclo['total_despesas'] or 0)
